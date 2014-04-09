@@ -90,6 +90,11 @@ nrow(PSRE) # 3066 individuals
 # Remove the unused columns
 PSRE <- PSRE[, -c(3:8, rem_cols)]
 
+# Remove non-trematode species:
+nontrem <- c(9:11)
+PSRE <- PSRE[, -nontrem]
+
+
 # Make columns for site and year labels:
 PSRE$site.yr <- as.character(PSRE$site.yr)
 PSRE$site <- substr(PSRE$site.yr, 1, nchar(PSRE$site.yr)-5)
@@ -106,27 +111,27 @@ for(i in 1:length(include)){
 nrow(PSRE.multiyear) #2055 records
 
 # Remove all but relevant columns from PSRE.multiyear
-PSRE.multiyear <- PSRE.multiyear[, 3:15]
+PSRE.multiyear <- PSRE.multiyear[, 3:ncol(PSRE.multiyear)]
 
 # Remove any individuals that have zero parasites
 zero.sums <- NULL
 for(i in 1:nrow(PSRE.multiyear)){
-  if(sum(PSRE.multiyear[i, 1:11])==0){
+  if(sum(PSRE.multiyear[i, 1:8])==0){
     zero.sums <- c(zero.sums, i)
   }
 }
-zero.sums #253 individuals
+length(zero.sums) #392 individuals
 
 PSRE.multiyear <- PSRE.multiyear[-zero.sums, ]
-nrow(PSRE.multiyear) #1802
+nrow(PSRE.multiyear) #1663
 #------------------------------------------------------------------------------------------------------------#
 
 # Step 3:
 # Assemble the occurrences into a matrix for each year
 
-Y.obs <- array(0, dim=c(11, length(include), 4)) # species, sites, years
+Y.obs <- array(0, dim=c(8, length(include), 4)) # species, sites, years
 colnames(Y.obs) <- include
-rownames(Y.obs) <- colnames(PSRE)[3:13]
+rownames(Y.obs) <- colnames(PSRE.multiyear)[1:8]
 
 # Add up occurrences for each site:
 years <- c("2009", "2010", "2011", "2012")
@@ -140,20 +145,9 @@ for(t in 1:4){ # number of years:
   sub <- subset(PSRE.multiyear, year==years[t] & site==include[i])
   J[i, t] <- nrow(sub)
   
-    for(j in 1:11){ # number of species:
+    for(j in 1:8){ # number of species:
       Y.obs[j, i, t] <- sum(sub[, j]) 
     } 
-  }
-}
-
-# Put NA's for sites in years that they did not get sampled:
-
-for(t in 1:4){ # number of years
-  for(i in 1:nrow(J)){ # number of sites
-    if(J[i, t]==0){
-      Y.obs[, i, t] <- rep(NA, nrow(Y.obs))
-      J[i, t] <- NA
-    }
   }
 }
 
@@ -206,6 +200,17 @@ for(t in 1:length(years)){
 }
 X[which(X=="NaN")] <- NA
 
+# Look for collinearity:
+cor(X[,c(1:26),1], use="complete.obs")
+quartz(height=10, width=10)
+pairs(X[,c(5,25:26),4])
+
+# pH is strongly correlated with:
+# Elev, Slope, Aspect, FOR, SSG, tempW, open_w, DO, DOmg, TotalN, DOC, DON
+# Remove these elements
+X <- X[, -c(1:3,5:6,11,13,18:19,22,24,26), ]
+
+
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
 ##############################################################################################################
@@ -230,23 +235,23 @@ zinit <- ifelse(Y.obs > 0, 1, 0)
 mu.xinit <- array(0, dim=c(jags_d$ncovs, jags_d$T))
 
 # Start the model
-params <- c("b", "c", "d", "p")
+params <- c("b0", "b", "c", "d", "p")
 
 mod <- NULL
 mod <- jags.model(file = "OccMod_MultiYear_SSVS.txt", 
                   data = jags_d, n.chains = 3, n.adapt=1000,
                   inits = list(z=zinit, mu.x=mu.xinit))
-update(mod, n.iter=2000) # 5000 burn-in
+update(mod, n.iter=5000) # 5000 burn-in
 
 out <- NULL
-out <- coda.samples(mod, n.iter = 5000, variable.names = params, thin=5)
+out <- coda.samples(mod, n.iter = 100, variable.names = params)
 
 #Plots:
 library(mcmcplots)
 
-lablims <- array(0, dim=c(11, 2))
+lablims <- array(0, dim=c(7, 2))
 start <- 1
-for(i in 1:11){
+for(i in 1:7){
   lablims[i,] <- c(start, start+42)
   start <- start+43
 }
@@ -257,18 +262,21 @@ caterplot(out, parms="p", horizontal=F)
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
   caterplot(out, parms="b", 
-            lab.lim=lablims[i, ], horizontal=F)
+            lab.lim=lablims[i, ], 
+            val.lim=c(-2, 2), horizontal=F)
 }
 
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
   caterplot(out, parms="c", 
-            lab.lim=lablims[i, ], horizontal=F)
+            lab.lim=lablims[i, ], 
+            val.lim=c(-5, 5), horizontal=F)
 }
 
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
   caterplot(out, parms="d", 
-            lab.lim=lablims[i, ], horizontal=F)
+            lab.lim=lablims[i, ], 
+            val.lim=c(-5, 5), horizontal=F)
 }
 

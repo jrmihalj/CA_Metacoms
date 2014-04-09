@@ -39,18 +39,18 @@ model {
     bSD[i] ~ dunif(0,100)
     bPrec_in[i] <- pow(bSD[i],-2)
     bPrec[i,1] <- bPrec_in[i]         #coeff. effectively zero
-    bPrec[i,2] <- bPrec_in[i]/1000    #non-zero coeff.
+    bPrec[i,2] <- bPrec_in[i]/100    #non-zero coeff.
   
   
     cSD[i] ~ dunif(0,100)  
     cPrec_in[i] <- pow(cSD[i],-2)
     cPrec[i,1] <- cPrec_in[i]         #coeff. effectively zero
-    cPrec[i,2] <- cPrec_in[i]/1000    #non-zero coeff.
+    cPrec[i,2] <- cPrec_in[i]/100    #non-zero coeff.
   
     dSD[i] ~ dunif(0,100)
     dPrec_in[i] <- pow(dSD[i],-2)
     dPrec[i,1] <- dPrec_in[i]         #coeff. effectively zero
-    dPrec[i,2] <- dPrec_in[i]/1000
+    dPrec[i,2] <- dPrec_in[i]/100
   }
 
   p_ind[1] <- 1/2
