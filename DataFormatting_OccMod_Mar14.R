@@ -205,17 +205,19 @@ for(t in 1:length(years)){
 }
 
 # Standardize each covariate: (value - mean)
+Xmeans <- array(0, dim=c(12, length(years)))
 for(t in 1:length(years)){
   for(j in 1:12){ # all the non-factor level covariates
+      Xmeans[j, t] <- mean(X[, j, t], na.rm=T)
     for(i in 1:nrow(X)){
-      X[i, j, t] <- X[i, j, t] - mean(X[, j, t], na.rm=T)
+      X[i, j, t] <- X[i, j, t] - Xmeans[j, t]
     }
   }
 }
 X[which(X=="NaN")] <- NA
 
 # Look for collinearity:
-cor(X[, c(1:12), 2], use="complete.obs")
+cor(X[, c(1:12), 1], use="complete.obs")
 quartz(height=10, width=10)
 pairs(X[,c(1:12),2])
 
