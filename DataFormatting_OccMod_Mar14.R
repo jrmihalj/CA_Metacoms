@@ -225,6 +225,9 @@ pairs(X[,c(1:12),2])
 # Snail_Rich and TotalN very correlated: Remove TotalN
 X <- X[, -c(6,9), ]
 
+# Finalized Covariates:
+colnames(X)
+
 
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
@@ -247,7 +250,6 @@ jags_d <- list(x=X,
 # Z values (unobserved), mu.x
 zinit <- NULL
 zinit <- ifelse(Y.obs > 0, 1, 0)
-mu.xinit <- array(0, dim=c(jags_d$ncovs, jags_d$T))
 
 # Start the model
 params <- c("b0", "b", "c", "d", "p")
@@ -255,7 +257,7 @@ params <- c("b0", "b", "c", "d", "p")
 mod <- NULL
 mod <- jags.model(file = "OccMod_MultiYear_SSVS.txt", 
                   data = jags_d, n.chains = 3, n.adapt=1000,
-                  inits = list(z=zinit, mu.x=mu.xinit))
+                  inits = list(z=zinit))
 update(mod, n.iter=5000) # 5000 burn-in
 
 out <- NULL
