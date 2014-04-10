@@ -162,9 +162,23 @@ for(t in 1:4){ # number of years:
 
 Cov <- read.csv(file.choose(), header=T)
 
-# For starters, I'm going to remove the nominal-level variables, and stick with
-# continuous variables:
-Cov <- Cov[, -c(6, 15, 19)]
+# I've used the following covariates:
+colnames(Cov)
+# [1] "Site"       "Year"       "Elev"       "WET"       
+# [5] "pH"         "veg_s"      "Canopy"     "Cond"      
+# [9] "Salin"      "DOmg"       "TotalN"     "TotalP"    
+# [13] "Amph_Rich"  "Snail_Rich" "AMCA"       "BUBO"      
+# [17] "PSRE"       "RACA"       "RADR"       "TATO"      
+# [21] "PHySA"      "LyMN"       "HELI"       "GyRA"      
+# [25] "RADIX"      "hydro" 
+
+# Columns 15 - 25 are pres/abs of host sp
+
+# Column 26 is hydro with levels: Permanent, Semi-permanent, Temporary
+# Make hydro into dummy variables:
+levels(Cov$hydro)[1] <- 1 # Permanent
+levels(Cov$hydro)[2] <- 2 # Semi-permanent
+levels(Cov$hydro)[3] <- 3 # Temporary
 
 # Subset all the relevant sites:
 Cov.multiyear <- data.frame()
@@ -176,39 +190,38 @@ for(i in 1:length(include)){
 
 # Store values into a site x covariate x year array to match Y.obs:
 X <- NULL
-X <- array(0, dim=c(length(include), 40, 4))
+X <- array(0, dim=c(length(include), ncol(Cov.multiyear)-2, length(years)))
 colnames(X) <- colnames(Cov.multiyear)[3:ncol(Cov.multiyear)]
 rownames(X) <- include
 
 for(t in 1:length(years)){
   for(i in 1:length(include)){
     sub <- NULL
-    sub <- subset(Cov.multiyear, Site==include[i] & Year==years[t], select=Elev:RADIX)
-    for(j in 1:40){
+    sub <- subset(Cov.multiyear, Site==include[i] & Year==years[t], select=Elev:hydro)
+    for(j in 1:ncol(X)){
     X[i, j, t] <- sub[1, j]
     }
   }
 }
 
-# Standardize each covariate:
+# Standardize each covariate: (value - mean)
 for(t in 1:length(years)){
-  for(j in 1:ncol(X)){
+  for(j in 1:12){ # all the non-factor level covariates
     for(i in 1:nrow(X)){
-      X[i, j, t] <- (X[i, j, t] - mean(X[, j, t], na.rm=T)) / sqrt(var(X[, j, t], na.rm=T))
+      X[i, j, t] <- X[i, j, t] - mean(X[, j, t], na.rm=T)
     }
   }
 }
 X[which(X=="NaN")] <- NA
 
 # Look for collinearity:
-cor(X[,c(1:26),1], use="complete.obs")
+cor(X[, c(1:12), 2], use="complete.obs")
 quartz(height=10, width=10)
-pairs(X[,c(5,25:26),4])
+pairs(X[,c(1:12),2])
 
-# pH is strongly correlated with:
-# Elev, Slope, Aspect, FOR, SSG, tempW, open_w, DO, DOmg, TotalN, DOC, DON
-# Remove these elements
-X <- X[, -c(1:3,5:6,11,13,18:19,22,24,26), ]
+# Conductivity and Salinity very correlated: Remove Conductivity
+# Snail_Rich and TotalN very correlated: Remove TotalN
+X <- X[, -c(6,9), ]
 
 
 ##############################################################################################################
