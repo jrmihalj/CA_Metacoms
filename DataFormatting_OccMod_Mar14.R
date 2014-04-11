@@ -261,7 +261,7 @@ mod <- jags.model(file = "OccMod_MultiYear_SSVS.txt",
 update(mod, n.iter=5000) # 5000 burn-in
 
 out <- NULL
-out <- coda.samples(mod, n.iter = 100, variable.names = params)
+out <- coda.samples(mod, n.iter = 5000, variable.names = params, thin=5)
 
 #Plots:
 library(mcmcplots)
@@ -274,26 +274,26 @@ for(i in 1:7){
 }
 
 quartz(height=4, width=11)
-caterplot(out, parms="p", horizontal=F)
+caterplot(out, parms="b0", horizontal=F)
 
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
   caterplot(out, parms="b", 
             lab.lim=lablims[i, ], 
-            val.lim=c(-2, 2), horizontal=F)
+            horizontal=F)
 }
 
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
   caterplot(out, parms="c", 
             lab.lim=lablims[i, ], 
-            val.lim=c(-5, 5), horizontal=F)
+            horizontal=F)
 }
 
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
   caterplot(out, parms="d", 
             lab.lim=lablims[i, ], 
-            val.lim=c(-5, 5), horizontal=F)
+            horizontal=F)
 }
 
