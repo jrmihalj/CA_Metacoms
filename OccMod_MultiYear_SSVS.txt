@@ -39,18 +39,18 @@ model {
     bSD[i] ~ dunif(0,100)
     bPrec_in[i] <- pow(bSD[i],-2)
     bPrec[i,1] <- bPrec_in[i]         #coeff. effectively zero
-    bPrec[i,2] <- bPrec_in[i]/100    #non-zero coeff.
+    bPrec[i,2] <- bPrec_in[i]/1000    #non-zero coeff.
   
   
     cSD[i] ~ dunif(0,100)  
     cPrec_in[i] <- pow(cSD[i],-2)
     cPrec[i,1] <- cPrec_in[i]         #coeff. effectively zero
-    cPrec[i,2] <- cPrec_in[i]/100    #non-zero coeff.
+    cPrec[i,2] <- cPrec_in[i]/1000    #non-zero coeff.
   
     dSD[i] ~ dunif(0,100)
     dPrec_in[i] <- pow(dSD[i],-2)
     dPrec[i,1] <- dPrec_in[i]         #coeff. effectively zero
-    dPrec[i,2] <- dPrec_in[i]/100
+    dPrec[i,2] <- dPrec_in[i]/1000
   }
 
   p_ind[1] <- 1/2
@@ -109,7 +109,7 @@ model {
     for (cov in 1:ncovs) {
       b_indA[i, cov] ~ dcat(p_ind[]) # returns 1 or 2
       b_incl[i, cov] <- b_indA[i, cov] - 1   # returns 0 or 1
-      b[i,cov] ~ dnorm(0, bPrec[i, b_indA[i, cov]])
+      b[i,cov] ~ dnorm(0, bPrec[i, b_indA[i, cov]])T(-12,12)
 
       for(k in 1:K){
           temp.b[i, k, cov, 1] <- b[i, cov] * x[k, cov, 1]
@@ -137,11 +137,11 @@ model {
     for (cov in 1:ncovs) {
       c_indA[i, cov] ~ dcat(p_ind[]) # returns 1 or 2
       c_incl[i, cov] <- c_indA[i, cov] - 1   # returns 0 or 1
-      c[i,cov] ~ dnorm(0, cPrec[i, c_indA[i, cov]])
+      c[i,cov] ~ dnorm(0, cPrec[i, c_indA[i, cov]])T(-12,12)
       
       d_indA[i, cov] ~ dcat(p_ind[]) # returns 1 or 2
       d_incl[i, cov] <- d_indA[i, cov] - 1   # returns 0 or 1
-      d[i,cov] ~ dnorm(0, dPrec[i, d_indA[i, cov]])
+      d[i,cov] ~ dnorm(0, dPrec[i, d_indA[i, cov]])T(-12,12)
       
       for(t in 1:(T-1)){
         for(k in 1:K){
