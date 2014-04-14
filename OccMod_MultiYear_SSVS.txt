@@ -21,10 +21,10 @@ model {
   #-------------------------------------------------------------------------------
   ## Precision estimates for each metacommunity average:
   
-  lpsiSD ~ dunif(0,100)
-  lpSD ~ dunif(0,100)
-  lphiSD ~ dunif(0,100)
-  lgamSD ~ dunif(0,100)
+  lpsiSD ~ dunif(0,10)
+  lpSD ~ dunif(0,10)
+  lphiSD ~ dunif(0,10)
+  lgamSD ~ dunif(0,10)
   
   lpsiPrec <- pow(lpsiSD,-2)
   lpPrec <- pow(lpSD,-2)
@@ -36,21 +36,22 @@ model {
   ## Stochastic search variable selection priors:
   
   for(i in 1:n){
-    bSD[i] ~ dunif(0,100)
+    bSD[i] ~ dunif(0,10)
     bPrec_in[i] <- pow(bSD[i],-2)
     bPrec[i,1] <- bPrec_in[i]         #coeff. effectively zero
-    bPrec[i,2] <- bPrec_in[i]/1000    #non-zero coeff.
+    bPrec[i,2] <- bPrec_in[i]/500    #non-zero coeff.
   
+    for(t in 1:(T-1)){
+      cSD[i,t] ~ dunif(0,10)  
+      cPrec_in[i,t] <- pow(cSD[i,t],-2)
+      cPrec[i,1,t] <- cPrec_in[i,t]         #coeff. effectively zero
+      cPrec[i,2,t] <- cPrec_in[i,t]/500    #non-zero coeff.
   
-    cSD[i] ~ dunif(0,100)  
-    cPrec_in[i] <- pow(cSD[i],-2)
-    cPrec[i,1] <- cPrec_in[i]         #coeff. effectively zero
-    cPrec[i,2] <- cPrec_in[i]/1000    #non-zero coeff.
-  
-    dSD[i] ~ dunif(0,100)
-    dPrec_in[i] <- pow(dSD[i],-2)
-    dPrec[i,1] <- dPrec_in[i]         #coeff. effectively zero
-    dPrec[i,2] <- dPrec_in[i]/1000
+      dSD[i,t] ~ dunif(0,10)
+      dPrec_in[i,t] <- pow(dSD[i,t],-2)
+      dPrec[i,1,t] <- dPrec_in[i,t]         #coeff. effectively zero
+      dPrec[i,2,t] <- dPrec_in[i,t]/500
+    }
   }
 
   p_ind[1] <- 1/2
@@ -60,7 +61,7 @@ model {
   #-------------------------------------------------------------------------------
   for(t in 1:T){
     for(cov in 1:10){
-      sd.x[cov,t] ~ dunif(0, 100)
+      sd.x[cov,t] ~ dunif(0, 10)
       Prec.x[cov,t] <- pow(sd.x[cov,t],-2)
     }
   }
@@ -135,18 +136,18 @@ model {
     # - I assume covariate effects don't change across years
     
     for (cov in 1:ncovs) {
-      c_indA[i, cov] ~ dcat(p_ind[]) # returns 1 or 2
-      c_incl[i, cov] <- c_indA[i, cov] - 1   # returns 0 or 1
-      c[i,cov] ~ dnorm(0, cPrec[i, c_indA[i, cov]])T(-12,12)
-      
-      d_indA[i, cov] ~ dcat(p_ind[]) # returns 1 or 2
-      d_incl[i, cov] <- d_indA[i, cov] - 1   # returns 0 or 1
-      d[i,cov] ~ dnorm(0, dPrec[i, d_indA[i, cov]])T(-12,12)
-      
       for(t in 1:(T-1)){
+        c_indA[i,cov,t] ~ dcat(p_ind[]) # returns 1 or 2
+        c_incl[i,cov,t] <- c_indA[i,cov,t] - 1   # returns 0 or 1
+        c[i,cov,t] ~ dnorm(0, cPrec[i, c_indA[i, cov], t])T(-12,12)
+      
+        d_indA[i,cov,t] ~ dcat(p_ind[]) # returns 1 or 2
+        d_incl[i,cov,t] <- d_indA[i,cov,t] - 1   # returns 0 or 1
+        d[i,cov,t] ~ dnorm(0, dPrec[i, d_indA[i,cov,t], t])T(-12,12)
+      
         for(k in 1:K){
-          temp.c[i, t, k, cov] <- c[i, cov] * x[k, cov, t]
-          temp.d[i, t, k, cov] <- d[i, cov] * x[k, cov, t]
+          temp.c[i, t, k, cov] <- c[i,cov,t] * x[k,cov,t]
+          temp.d[i, t, k, cov] <- d[i,cov,t] * x[k,cov,t]
         }
       }
     }
