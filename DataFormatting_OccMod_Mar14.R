@@ -12,6 +12,7 @@
 #    - Years of interest: 2009 - 2012
 #    - Need to use sites that were sampled at least two years in order to estimate colonization
 #      and persistence parameters
+#    - Include sites that had at least 5 PSRE dissected each year.
 #    - Create matrix of J (resampling surveys) per site (i.e. number of frogs sampled per year)
 #    - Create one array for all parasite species, and one with trematode-only parasites:
 # Here is a list of parasite species that will be included in the study:
@@ -41,24 +42,6 @@
 # 1. Create a parasite species-by-site-by-year array:
 
 # Step 1:
-# Figure out which sites were sampled in at least 2 years:
-# file name: SitesAndYears.csv
-SitesYears <- read.csv(file.choose(), header=T) #SitesAndYears.csv
-levels(SitesYears$site)
-
-# Store the sites that were sampled more than one year
-include <- NULL 
-for(i in 1:length(levels(SitesYears$site))){
-  sub <- NULL
-  sub <- subset(SitesYears, site==levels(SitesYears$site)[i])
-  
-  if(nrow(sub) > 1){
-    include <- c(include, levels(SitesYears$site)[i])
-  }
-}
-#------------------------------------------------------------------------------------------------------------#
-
-# Step 2:
 # Subset out all the sites sampled more than one year:
 
 # Import the dataset that has all individual PSRE dissected
@@ -100,49 +83,69 @@ PSRE$site.yr <- as.character(PSRE$site.yr)
 PSRE$site <- substr(PSRE$site.yr, 1, nchar(PSRE$site.yr)-5)
 PSRE$year <- substr(PSRE$site.yr, nchar(PSRE$site.yr)-3, nchar(PSRE$site.yr))
 
-# Subset out the sites that were sampled in more than one year:
+# Subset out the sites that were sampled in more than one year
+# AND had at least 5 PSRE dissected each time
+
+years <- c("2009", "2010", "2011", "2012")
+
 PSRE.multiyear <- data.frame()
-for(i in 1:length(include)){
-  sub <- NULL
-  sub <- subset(PSRE, site==include[i])
-  PSRE.multiyear <- rbind(PSRE.multiyear, sub)
-}
-
-nrow(PSRE.multiyear) #2055 records
-
-# Remove all but relevant columns from PSRE.multiyear
-PSRE.multiyear <- PSRE.multiyear[, 3:ncol(PSRE.multiyear)]
-
-# Remove any individuals that have zero parasites
-zero.sums <- NULL
-for(i in 1:nrow(PSRE.multiyear)){
-  if(sum(PSRE.multiyear[i, 1:8])==0){
-    zero.sums <- c(zero.sums, i)
+for(i in 1:length(unique(PSRE$site))){
+  for(t in 1:length(years)){
+    sub <- NULL
+    sub <- subset(PSRE, site==unique(PSRE$site)[i] & year==years[t])
+    if(nrow(sub) >= 5){
+      PSRE.multiyear <- rbind(PSRE.multiyear, sub)
+    }
   }
 }
-length(zero.sums) #392 individuals
 
-PSRE.multiyear <- PSRE.multiyear[-zero.sums, ]
-nrow(PSRE.multiyear) #1663
+nrow(PSRE.multiyear) #3048 records
+
+# Figure out which sites were sampled in at least 2 years:
+# file name: SitesAndYears.csv
+
+# Store the sites that were sampled more than one year
+PSRE.included <- data.frame()
+for(i in 1:length(unique(PSRE.multiyear$site))){
+  sub <- NULL
+  sub <- subset(PSRE.multiyear, site==unique(PSRE.multiyear$site)[i])
+  if(length(unique(sub$year)) > 1){ # sampled in more than one year
+    PSRE.included <- rbind(PSRE.included, sub)
+  }
+}
+
+unique(PSRE.included$site) #69 sites
+
+# Remove all but relevant columns from PSRE.multiyear
+PSRE.included <- PSRE.included[, 3:ncol(PSRE.included)]
+
+# # Remove any individuals that have zero parasites
+# zero.sums <- NULL
+# for(i in 1:nrow(PSRE.included)){
+#   if(sum(PSRE.included[i, 1:8])==0){
+#     zero.sums <- c(zero.sums, i)
+#   }
+# }
+# length(zero.sums) #379 individuals
+# 
+# PSRE.included <- PSRE.included[-zero.sums, ]
+# nrow(PSRE.included) #1635
 #------------------------------------------------------------------------------------------------------------#
 
 # Step 3:
 # Assemble the occurrences into a matrix for each year
 
-Y.obs <- array(0, dim=c(8, length(include), 4)) # species, sites, years
-colnames(Y.obs) <- include
-rownames(Y.obs) <- colnames(PSRE.multiyear)[1:8]
-
-# Add up occurrences for each site:
-years <- c("2009", "2010", "2011", "2012")
+Y.obs <- array(0, dim=c(8, length(unique(PSRE.included$site)), length(years))) # species, sites, years
+colnames(Y.obs) <- unique(PSRE.included$site)
+rownames(Y.obs) <- colnames(PSRE.included)[1:8]
 
 # Create a matrix of J:
-J <- array(0, dim=c(length(include), 4)) # the number of individuals dissected at each site
+J <- array(0, dim=c(length(unique(PSRE.included$site)), length(years))) # the number of individuals dissected at each site
 
 for(t in 1:4){ # number of years:
-  for (i in 1:length(include)){ # number of sites:
+  for (i in 1:length(unique(PSRE.included$site))){ # number of sites:
   sub <- NULL
-  sub <- subset(PSRE.multiyear, year==years[t] & site==include[i])
+  sub <- subset(PSRE.included, year==years[t] & site==unique(PSRE.included$site)[i])
   J[i, t] <- nrow(sub)
   
     for(j in 1:8){ # number of species:
@@ -182,39 +185,41 @@ levels(Cov$hydro)[3] <- 3 # Temporary
 
 # Subset all the relevant sites:
 Cov.multiyear <- data.frame()
-for(i in 1:length(include)){
+for(i in 1:length(unique(PSRE.included$site))){
   sub <- NULL
-  sub <- subset(Cov, Site==include[i])
+  sub <- subset(Cov, Site==unique(PSRE.included$site)[i])
   Cov.multiyear <- rbind(Cov.multiyear, sub)
 }
 
 # Store values into a site x covariate x year array to match Y.obs:
 X <- NULL
-X <- array(0, dim=c(length(include), ncol(Cov.multiyear)-2, length(years)))
+X <- array(0, dim=c(length(unique(PSRE.included$site)), ncol(Cov.multiyear)-2, length(years)))
 colnames(X) <- colnames(Cov.multiyear)[3:ncol(Cov.multiyear)]
-rownames(X) <- include
+rownames(X) <- unique(PSRE.included$site)
 
 for(t in 1:length(years)){
-  for(i in 1:length(include)){
+  for(i in 1:length(unique(PSRE.included$site))){
     sub <- NULL
-    sub <- subset(Cov.multiyear, Site==include[i] & Year==years[t], select=Elev:hydro)
+    sub <- subset(Cov.multiyear, Site==unique(PSRE.included$site)[i] & Year==years[t], select=Elev:hydro)
     for(j in 1:ncol(X)){
     X[i, j, t] <- sub[1, j]
     }
   }
 }
 
-# Standardize each covariate: (value - mean)
+# Standardize each covariate: (value - mean) / 2sd
 Xmeans <- array(0, dim=c(12, length(years)))
+Xsds <- array(0, dim=c(12, length(years)))
 for(t in 1:length(years)){
   for(j in 1:12){ # all the non-factor level covariates
       Xmeans[j, t] <- mean(X[, j, t], na.rm=T)
+      Xsds[j, t] <- 2*sqrt(var(X[, j, t], na.rm=T))
     for(i in 1:nrow(X)){
-      X[i, j, t] <- X[i, j, t] - Xmeans[j, t]
+      X[i, j, t] <- (X[i, j, t] - Xmeans[j, t]) / Xsds[j, t]
     }
   }
 }
-X[which(X=="NaN")] <- NA
+# X[which(X=="NaN")] <- NA
 
 # Look for collinearity:
 cor(X[, c(1:12), 1], use="complete.obs")
@@ -222,8 +227,7 @@ quartz(height=10, width=10)
 pairs(X[,c(1:12),2])
 
 # Conductivity and Salinity very correlated: Remove Conductivity
-# Snail_Rich and TotalN very correlated: Remove TotalN
-X <- X[, -c(6,9), ]
+X <- X[, -c(6), ]
 
 # Finalized Covariates:
 colnames(X)
@@ -252,16 +256,16 @@ zinit <- NULL
 zinit <- ifelse(Y.obs > 0, 1, 0)
 
 # Start the model
-params <- c("b0", "b", "c", "d", "p")
+params <- c("b0", "c0", "d0", "b", "c", "d", "p","psiMean","phiMean","gamMean")
 
 mod <- NULL
 mod <- jags.model(file = "OccMod_MultiYear_SSVS.txt", 
-                  data = jags_d, n.chains = 3, n.adapt=1000,
+                  data = jags_d, n.chains = 3, n.adapt=2000,
                   inits = list(z=zinit))
-update(mod, n.iter=5000) # 5000 burn-in
+update(mod, n.iter=10000) # 5000 burn-in
 
 out <- NULL
-out <- coda.samples(mod, n.iter = 5000, variable.names = params, thin=5)
+out <- coda.samples(mod, n.iter = 10000, variable.names = params, thin=5)
 
 #Plots:
 library(mcmcplots)
