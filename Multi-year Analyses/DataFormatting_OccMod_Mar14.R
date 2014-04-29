@@ -274,16 +274,22 @@ jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:getDoParWorkers()) %dopar% {
   library(rjags)
   setwd("~/GitHub/CA_Metacoms")
+<<<<<<< HEAD:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
 <<<<<<< HEAD:DataFormatting_OccMod_Mar14.R
   nstore<-1500
   nadap<-10000
   nburn<-30000
   thin<-40
 =======
+=======
+>>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
   nstore<-1000
   nadap<-30000
   nburn<-20000
   thin<-60
+<<<<<<< HEAD:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+>>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+=======
 >>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
   mod <- jags.model(file = "OccMod_MultiYear_SSVS.txt", 
                     data = jags_d, n.chains = 1, n.adapt=nadap,
@@ -306,7 +312,12 @@ stopCluster(cl)
 #Plots:
 library(mcmcplots)
 
+<<<<<<< HEAD:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
 <<<<<<< HEAD:DataFormatting_OccMod_Mar14.R
+=======
+mcmcplot(bundle, parms="b") # creates HTML of diagnostic plots
+
+>>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
 =======
 mcmcplot(bundle, parms="b") # creates HTML of diagnostic plots
 
@@ -330,6 +341,9 @@ caterplot(bundle, parms="p", horizontal=F)
 
 for(i in 1:nrow(lablims)){
   quartz(height=4, width=11)
+<<<<<<< HEAD:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+>>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+=======
 >>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
   caterplot(bundle, parms="b", 
             lab.lim=lablims[i, ], 
@@ -341,6 +355,9 @@ for(i in 1:nrow(lablims)){
   x11(height=4, width=11)
 =======
   quartz(height=4, width=11)
+<<<<<<< HEAD:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+>>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+=======
 >>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
   caterplot(bundle, parms="c", 
             lab.lim=lablims[i, ], 
@@ -352,6 +369,9 @@ for(i in 1:nrow(lablims)){
   x11(height=4, width=11)
 =======
   quartz(height=4, width=11)
+<<<<<<< HEAD:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+>>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
+=======
 >>>>>>> 82774c38031d2f8ec1541e5fbcedfdf9e734c539:Multi-year Analyses/DataFormatting_OccMod_Mar14.R
   caterplot(bundle, parms="d", 
             lab.lim=lablims[i, ], 
