@@ -288,9 +288,9 @@ jags.parsamps <- foreach(i=1:getDoParWorkers()) %dopar% {
   setwd("~/GitHub/CA_Metacoms")
   nstore<-1000
   nadap<-30000
-  nburn<-20000
-  thin<-60
-  mod <- jags.model(file = "OccMod_MultiYear_SSVS.txt", 
+  nburn<-30000
+  thin<-50
+  mod <- jags.model(file = "OccMod_Single_SSVS.txt", 
                     data = jags_d, n.chains = 1, n.adapt=nadap,
                     inits = list(z=zinit))
   update(mod, n.iter=nburn)
@@ -313,36 +313,36 @@ library(mcmcplots)
 
 #mcmcplot(bundle, parms="b") # creates HTML of diagnostic plots
 
-lablims <- array(0, dim=c(5, 2))
+lablims <- array(0, dim=c(7, 2))
 start <- 1
 for(i in 1:nrow(lablims)){
   lablims[i,] <- c(start, start+42)
   start <- start+43
 }
 
-quartz(height=4, width=11)
-caterplot(bundle, parms="p", horizontal=F)
+x11(height=4, width=11)
+caterplot(bundle, parms="psiMean", horizontal=F)
 
 for(i in 1:nrow(lablims)){
-  quartz(height=4, width=11)
+  x11(height=4, width=11)
   caterplot(bundle, parms="b", 
             lab.lim=lablims[i, ], 
             horizontal=F)
 }
 
-for(i in 1:nrow(lablims)){
-  quartz(height=4, width=11)
-  caterplot(bundle, parms="c", 
-            lab.lim=lablims[i, ], 
-            horizontal=F)
-}
-
-for(i in 1:nrow(lablims)){
-  quartz(height=4, width=11)
-  caterplot(bundle, parms="d", 
-            lab.lim=lablims[i, ], 
-            horizontal=F)
-}
+# for(i in 1:nrow(lablims)){
+#   x11(height=4, width=11)
+#   caterplot(bundle, parms="c", 
+#             lab.lim=lablims[i, ], 
+#             horizontal=F)
+# }
+# 
+# for(i in 1:nrow(lablims)){
+#   x11(height=4, width=11)
+#   caterplot(bundle, parms="d", 
+#             lab.lim=lablims[i, ], 
+#             horizontal=F)
+# }
 
 # Make some data frames...
 library(ggmcmc)

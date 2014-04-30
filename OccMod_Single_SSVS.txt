@@ -28,10 +28,10 @@ model {
   ## Stochastic search variable selection priors:
   
   for(i in 1:n){
-    bSD[i] ~ dunif(0,50)
+    bSD[i] ~ dunif(0,75)
     bPrec_in[i] <- pow(bSD[i],-2)
     bPrec[i,1] <- bPrec_in[i]         #coeff. effectively zero
-    bPrec[i,2] <- bPrec_in[i]/1000    #non-zero coeff.
+    bPrec[i,2] <- bPrec_in[i]/5000    #non-zero coeff.
   }
   
   p_ind[1] <- 1/2
