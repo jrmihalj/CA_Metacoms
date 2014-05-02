@@ -82,8 +82,7 @@ PSRE$site.yr <- as.character(PSRE$site.yr)
 PSRE$site <- substr(PSRE$site.yr, 1, nchar(PSRE$site.yr)-5)
 PSRE$year <- substr(PSRE$site.yr, nchar(PSRE$site.yr)-3, nchar(PSRE$site.yr))
 
-# Subset out the sites that were sampled in more than one year
-# AND had at least 5 PSRE dissected each time
+# Subset out the sites that had at least 5 PSRE dissected each time
 
 years <- c("2009", "2010", "2011", "2012")
 
@@ -113,10 +112,12 @@ nrow(PSRE.multiyear) #3048 records
 #   }
 # }
 
-# unique(PSRE.included$site) #69 sites
+# Sort by year:
+PSRE.multiyear <- PSRE.multiyear[order(PSRE.multiyear$year), ]
+
 
 # Remove all but relevant columns from PSRE.multiyear
-PSRE.included <- PSRE.multiyear[, c(1, 3:13)]
+PSRE.included <- PSRE.multiyear[, c(1, 3:10)]
 unique(PSRE.included$site.yr) # 289 sites.yr's
 
 # # Remove any individuals that have zero parasites
@@ -275,7 +276,7 @@ params <- c("b0", "b", "p", "psiMean", "pMean")
 # 
 # out <- NULL
 # out <- coda.samples(mod, n.iter = nstore*thin, variable.names = params, thin=thin)
-
+# 
 
 # Run model in parallel:
 library(doParallel)

@@ -27,11 +27,13 @@ model {
   ## Estimates for covariate effects:
   ## Stochastic search variable selection priors:
   
-  for(i in 1:n){
-    bSD[i] ~ dunif(0,75)
-    bPrec_in[i] <- pow(bSD[i],-2)
-    bPrec[i,1] <- bPrec_in[i]         #coeff. effectively zero
-    bPrec[i,2] <- bPrec_in[i]/5000    #non-zero coeff.
+  for(t in 1:4){ # Different covariate effects per year:
+    for(i in 1:n){
+      bSD[i,t] ~ dunif(0,50)
+      bPrec_in[i,t] <- pow(bSD[i,t],-2)
+      bPrec[i,t,1] <- bPrec_in[i,t]         #coeff. effectively zero
+      bPrec[i,t,2] <- bPrec_in[i,t]/1000    #non-zero coeff.
+    }
   }
   
   p_ind[1] <- 1/2
@@ -73,22 +75,56 @@ model {
   for (i in 1:n) { # n=number of species
     
     ## Species-specific covariate effects on occurrence:
-    for (cov in 1:ncovs) {
-      b_indA[i, cov] ~ dcat(p_ind[]) # returns 1 or 2
-      b_incl[i, cov] <- b_indA[i, cov] - 1   # returns 0 or 1
-      b[i,cov] ~ dnorm(0, bPrec[i, b_indA[i, cov]])T(-12,12)
-      
-      for(k in 1:K){
-        temp.b[i, k, cov] <- b[i, cov] * x[k, cov] # speed up matrix calculations
+    for(t in 1:4){
+      for (cov in 1:ncovs) {
+        b_indA[i, cov, t] ~ dcat(p_ind[]) # returns 1 or 2
+        b_incl[i, cov, t] <- b_indA[i, cov, t] - 1   # returns 0 or 1
+        b[i,cov,t] ~ dnorm(0, bPrec[i, t, b_indA[i, cov, t]])T(-12,12)
       }
     }
     
-    b0[i] ~ dnorm(lpsiMean, lpsiPrec)T(-12,12) # Species-specific baseline occurrence prob.
+    for(cov in 1:ncovs){
+      for(k in 1:83){
+        temp.b[i, k, cov] <- b[i, cov, 1] * x[k, cov] # speed up matrix calculations
+      }
+      for(k in 84:188){
+        temp.b[i, k, cov] <- b[i, cov, 2] * x[k, cov] # speed up matrix calculations
+      }
+      for(k in 189:255){
+        temp.b[i, k, cov] <- b[i, cov, 3] * x[k, cov] # speed up matrix calculations
+      }
+      for(k in 256:289){
+        temp.b[i, k, cov] <- b[i, cov, 4] * x[k, cov] # speed up matrix calculations
+      }
+    }
+
+    
+    for(t in 1:4){
+      b0[i,t] ~ dnorm(lpsiMean, lpsiPrec)T(-12,12) # Species-specific baseline occurrence prob. 
+    }
     lp[i] ~ dnorm(lpMean, lpPrec)T(-12,12) # Species-specific detection prob at t=1
     p[i] <- 1/(1+exp(-lp[i])) # Manual anti-logit
     
-    for (k in 1:K) {
-      lpsi[i,k] <- b0[i] + sum(temp.b[i, k, ])
+    for (k in 1:83) {
+      lpsi[i,k] <- b0[i,1] + sum(temp.b[i, k, ])
+      psi[i,k] <- 1/(1 + exp(-lpsi[i,k]))
+      z[i,k] ~ dbern(psi[i,k])
+      y[i,k] ~ dbin(p[i]*z[i,k], J[k]) # J=number of hosts sampled from each site
+    }
+    for (k in 84:188) {
+      lpsi[i,k] <- b0[i,2] + sum(temp.b[i, k, ])
+      psi[i,k] <- 1/(1 + exp(-lpsi[i,k]))
+      z[i,k] ~ dbern(psi[i,k])
+      y[i,k] ~ dbin(p[i]*z[i,k], J[k]) # J=number of hosts sampled from each site
+    }
+    for (k in 189:255) {
+      lpsi[i,k] <- b0[i,3] + sum(temp.b[i, k, ])
+      psi[i,k] <- 1/(1 + exp(-lpsi[i,k]))
+      z[i,k] ~ dbern(psi[i,k])
+      y[i,k] ~ dbin(p[i]*z[i,k], J[k]) # J=number of hosts sampled from each site
+    }
+    for (k in 256:289) {
+      lpsi[i,k] <- b0[i,4] + sum(temp.b[i, k, ])
       psi[i,k] <- 1/(1 + exp(-lpsi[i,k]))
       z[i,k] ~ dbern(psi[i,k])
       y[i,k] ~ dbin(p[i]*z[i,k], J[k]) # J=number of hosts sampled from each site
