@@ -226,10 +226,17 @@ for(j in 1:12){ # all the non-factor level covariates
 }
 # X[which(X=="NaN")] <- NA
 
+# Insert the NMDS results:
+X <- data.frame(X, Amph_NMDS, Snails_NMDS_fixed[,2:3])
+# Remove the pres/abs of hosts:
+X <- X[, -c(12:22)]
+# Re-arrange a bit:
+X <- X[, c(1:11, 13:16, 12)]
+
 # Look for collinearity:
-cor(X[, c(1:12)], use="complete.obs")
+cor(X[, c(1:15)], use="complete.obs")
 quartz(height=10, width=10)
-pairs(X[,c(1:12)])
+pairs(X[,c(1:15)])
 
 # Conductivity and Salinity very correlated: Remove Conductivity
 X <- X[, -c(6)]
