@@ -253,6 +253,9 @@ colnames(X)
 #####     RUN JAGS MODEL     #####
 ##################################
 library(rjags)
+library(random)
+load.module("lecuyer")
+load.module("glm")
 jags_d <- NULL
 jags_d <- list(x=X,
                y=Y.obs,
@@ -267,8 +270,16 @@ jags_d <- list(x=X,
 zinit <- NULL
 zinit <- ifelse(Y.obs > 0, 1, 0)
 
+jinits <- function() {
+  list(
+   z=ifelse(Y.obs > 0, 1, 0),
+  .RNG.name=c("base::Super-Duper"),
+  .RNG.seed=as.numeric(randomNumbers(n = 1, min = 1, max = 1e+06, col=1))
+  )
+}
+
 # Start the model
-params <- c("b0", "b", "p", "psiMean", "pMean")
+params <- c("b0", "b", "p", "psiMean", "pMean", "z")
 
 # nstore<-1000
 # nadap<-1000
@@ -291,16 +302,15 @@ cl <- makeCluster(3)
 registerDoParallel(cl)
 
 jags.parsamps <- NULL
-jags.parsamps <- foreach(i=1:getDoParWorkers()) %dopar% {
-  library(rjags)
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   setwd("~/GitHub/CA_Metacoms")
   nstore<-1000
-  nadap<-30000
-  nburn<-30000
-  thin<-50
+  nadap<-80000
+  nburn<-80000
+  thin<-75
   mod <- jags.model(file = "OccMod_Single_SSVS.txt", 
                     data = jags_d, n.chains = 1, n.adapt=nadap,
-                    inits = list(z=zinit))
+                    inits = jinits)
   update(mod, n.iter=nburn)
   out <- coda.samples(mod, n.iter = nstore*thin, variable.names = params, thin=thin)
   return(out)
@@ -319,9 +329,9 @@ stopCluster(cl)
 #Plots:
 library(mcmcplots)
 
-#mcmcplot(bundle, parms="b") # creates HTML of diagnostic plots
+mcmcplot(bundle, parms="b") # creates HTML of diagnostic plots
 
-lablims <- array(0, dim=c(7, 2))
+lablims <- array(0, dim=c(12, 2))
 start <- 1
 for(i in 1:nrow(lablims)){
   lablims[i,] <- c(start, start+42)
@@ -329,7 +339,7 @@ for(i in 1:nrow(lablims)){
 }
 
 x11(height=4, width=11)
-caterplot(bundle, parms="psiMean", horizontal=F)
+caterplot(bundle, parms="b0", horizontal=F)
 
 for(i in 1:nrow(lablims)){
   x11(height=4, width=11)
@@ -356,10 +366,10 @@ for(i in 1:nrow(lablims)){
 library(ggmcmc)
 
 post.z <- ggs(bundle, family="z")
-post.c <- ggs(bundle, family="c")
-post.d <- ggs(bundle, family="d")
+post.b0 <- ggs(bundle, family="b0")
+post.p <- ggs(bundle, family="p")
 post.b <- ggs(bundle, family="b")
 
-
+ggs_Rhat(post.b)
 
 
