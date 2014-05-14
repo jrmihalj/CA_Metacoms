@@ -117,7 +117,7 @@ PSRE.multiyear <- PSRE.multiyear[order(PSRE.multiyear$year), ]
 
 
 # Remove all but relevant columns from PSRE.multiyear
-PSRE.included <- PSRE.multiyear[, c(1, 3:10)]
+PSRE.included <- PSRE.multiyear[, c(1, 3:(ncol(PSRE)-2))]
 unique(PSRE.included$site.yr) # 289 sites.yr's
 
 # # Remove any individuals that have zero parasites
@@ -227,16 +227,20 @@ for(j in 1:12){ # all the non-factor level covariates
 # X[which(X=="NaN")] <- NA
 
 # Insert the NMDS results:
-X <- data.frame(X, Amph_NMDS, Snails_NMDS_fixed[,2:3])
+X <- data.frame(X, Amph_NMDS_fixed[,2:3], Snails_NMDS_fixed[,2:3])
+
+# Insert the reciprocal averaging results:
+X <- data.frame(X, Amph_RA, Snails_RA_fixed[,2:3])
+
 # Remove the pres/abs of hosts:
-X <- X[, -c(12:22)]
+X <- X[, -c(13:23)]
 # Re-arrange a bit:
-X <- X[, c(1:11, 13:16, 12)]
+X <- X[, c(1:12, 14:21, 13)]
 
 # Look for collinearity:
-cor(X[, c(1:15)], use="complete.obs")
+cor(X[, c(11:20)], use="complete.obs")
 quartz(height=10, width=10)
-pairs(X[,c(1:15)])
+pairs(X[,c(1:20)])
 
 # Conductivity and Salinity very correlated: Remove Conductivity
 X <- X[, -c(6)]
@@ -371,5 +375,18 @@ post.p <- ggs(bundle, family="p")
 post.b <- ggs(bundle, family="b")
 
 ggs_Rhat(post.b)
+
+# Separate parasite species (covariate responses):
+post.b_Alaria <- post.b[grep("b[[]1+", post.b$Parameter), ]
+post.b_Clin <- post.b[grep("b[[]2+", post.b$Parameter), ]
+post.b_Fib <- post.b[grep("b[[]3+", post.b$Parameter), ]
+post.b_Glob <- post.b[grep("b[[]4+", post.b$Parameter), ]
+post.b_Echi <- post.b[grep("b[[]5+", post.b$Parameter), ]
+post.b_Mano <- post.b[grep("b[[]6+", post.b$Parameter), ]
+post.b_Rib <- post.b[grep("b[[]7+", post.b$Parameter), ]
+post.b_Thic <- post.b[grep("b[[]8+", post.b$Parameter), ]
+
+ggs_caterpillar(post.b_Rib)
+
 
 
