@@ -41,7 +41,7 @@ model {
   
   ## Missing data priors:
   #-------------------------------------------------------------------------------
-  for(cov in 1:15){
+  for(cov in 1:19){
     sd.x[cov] ~ dunif(0,10)
     Prec.x[cov] <- pow(sd.x[cov],-2)
   }
@@ -54,14 +54,14 @@ model {
   #-------------------------------------------------------------------------------
   
   # Deal with the missing covariates:
-  for(cov in 1:15){
+  for(cov in 1:119){
     for(k in 1:K){
       x[k, cov] ~ dnorm(0, Prec.x[cov])
     }
   }
   
   for(k in 1:K){
-    x[k, 16] ~ dcat(p.hydro[])
+    x[k, 20] ~ dcat(p.hydro[])
   }
   
   # Occupancy states:
