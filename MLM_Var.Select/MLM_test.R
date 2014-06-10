@@ -96,10 +96,11 @@ jags_d <- list(Y=Y,
 
 
 # set wd:
-# setwd("~/Documents/Thesis Research/CA metacoms/CAmetacomsCode/MLM_Var.Select")
+setwd("~/Documents/Thesis Research/CA metacoms/CAmetacomsCode/MLM_Var.Select")
 
 # parameters:
-params <- c("alpha", "betas", "I", "tau.beta", "p.detect", "p.include")
+params <- c("alpha", "betas", "I", "tau.beta", "p.detect", "p.include", 
+            "sd.beta.post", "psi")
 
 jinits <- function() {
   list(
@@ -160,7 +161,8 @@ library(mcmcplots)
 alpha.df <- ggs(bundle, family="alpha")
 beta.df <- ggs(bundle, family="betas")
 I.df <- ggs(bundle, family="I")
-tau.beta.df <- ggs(bundle, family="tau.beta")
+#tau.beta.df <- ggs(bundle, family="tau.beta")
+sd.beta.df <- ggs(bundle, family="sd.beta.post")
 p.detect.df <- ggs(bundle, family="p.detect")
 p.include.df <- ggs(bundle, family="p.include")
 
@@ -170,11 +172,11 @@ ggs_Rhat(tau.beta.df)
 ggs_Rhat(p.detect.df)
 ggs_Rhat(p.include.df)
 
-
-x11(height=4, width=11)
+quartz(height=4, width=11)
+#x11(height=4, width=11)
 caterplot(bundle, parms="betas", horizontal=F, random=50)
 
-caterplot(bundle, parms="p.detect", horizontal=F)#, val.lim=c(-1, 10))
+caterplot(bundle, parms="tau.beta", horizontal=F, val.lim=c(-1, 10))
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
@@ -210,10 +212,14 @@ ordered.mods[1:5, ]
 ################################################
 # Check random vs. fixed:
 ################################################
+source(file="HDI.R")
+hdi.var <- array(0, dim=c(Ncov, 2))
 
-median.tau <- NULL
 for(i in 1:Ncov){
-  sub <- subset(tau.beta.df, Parameter==paste("tau.beta[", i, "]", sep=""))$value
-  median.tau[i] <- median(sub)
+  sub <- subset(tau.beta.df, Parameter==paste("tau.beta[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of tau
+  hdi <- 1/hdi #HDI of var
+  
+  hdi.var[i, ] <- hdi
 }
-median.tau
+
