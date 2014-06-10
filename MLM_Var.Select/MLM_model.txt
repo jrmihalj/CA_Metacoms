@@ -53,5 +53,9 @@ model {
     }
   }
 
+  for(j in 1:Ncov){
+    sd.beta.post[j] <- sd(betas[, j])
+  }
+
    
 }
