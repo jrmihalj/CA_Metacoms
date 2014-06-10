@@ -66,6 +66,12 @@ for(i in 1:Nobs){
   }
 }
 
+# Some of the X variables are highly correlated:
+# Keep CA, Elevation
+# Remove: OM, N, Mg, pH, K, Litu2, Ca2
+
+X <- X[, -c(15,20,17,14,19,23)]
+Ncov <- ncol(X)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
@@ -73,6 +79,9 @@ for(i in 1:Nobs){
 # JAGS model run:
 ################################################
 library(rjags)
+library(random)
+load.module("lecuyer")
+load.module("glm")
 # data:
 jags_d <- list(Y=Y,
                X=X,
@@ -82,29 +91,63 @@ jags_d <- list(Y=Y,
                Nobs=Nobs,
                J=J)
 
-zinit <- NULL
-zinit <- ifelse(Y > 0, 1, 0)
+# zinit <- NULL
+# zinit <- ifelse(Y > 0, 1, 0)
 
-store<-10
-nadap<-1000
-nburn<-5
-thin<-5
 
 # set wd:
-setwd("~/Documents/Thesis Research/CA metacoms/CAmetacomsCode/MLM_Var.Select")
+# setwd("~/Documents/Thesis Research/CA metacoms/CAmetacomsCode/MLM_Var.Select")
 
 # parameters:
-params <- c("alpha", "betas", "I", "tau.beta")
+params <- c("alpha", "betas", "I", "tau.beta", "p.detect", "p.include")
+
+jinits <- function() {
+  list(
+    z=ifelse(Y > 0, 1, 0),
+    .RNG.name=c("base::Super-Duper"),
+    .RNG.seed=as.numeric(randomNumbers(n = 1, min = 1, max = 1e+06, col=1))
+  )
+}
 
 # initialize model:
-mod <- NULL
-mod <- jags.model(file = "MLM_model.txt", 
-                  data = jags_d, n.chains = 3, n.adapt=nadap,
-                  inits = list(z=zinit))
-update(mod, n.iter=nburn)
 
-out <- NULL
-out <- coda.samples(mod, n.iter = store*thin, variable.names = params, thin=thin)
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+jags.parsamps <- NULL
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
+  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
+  store<-1000
+  nadap<-50000
+  nburn<-50000
+  thin<-50
+  mod <- jags.model(file = "MLM_model.txt", 
+                    data = jags_d, n.chains = 1, n.adapt=nadap,
+                    inits = jinits)
+  update(mod, n.iter=nburn)
+  out <- coda.samples(mod, n.iter = store*thin, variable.names = params, thin=thin)
+  return(out)
+}
+
+bundle <- NULL
+bundle <- list(jags.parsamps[[1]][[1]],
+               jags.parsamps[[2]][[1]],
+               jags.parsamps[[3]][[1]])
+
+class(bundle) <- "mcmc.list"
+
+stopCluster(cl)
+
+# # initialize model:
+# mod <- NULL
+# mod <- jags.model(file = "MLM_model.txt", 
+#                   data = jags_d, n.chains = 3, n.adapt=nadap,
+#                   inits = list(z=zinit))
+# update(mod, n.iter=nburn)
+# 
+# out <- NULL
+# out <- coda.samples(mod, n.iter = store*thin, variable.names = params, thin=thin)
 
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
@@ -114,10 +157,63 @@ out <- coda.samples(mod, n.iter = store*thin, variable.names = params, thin=thin
 ################################################
 library(ggmcmc)
 library(mcmcplots)
-alpha.df <- ggs(out, family="alpha")
-beta.df <- ggs(out, family="betas")
-I.df <- ggs(out, family="I")
-tau.beta.df <- ggs(out, family="tau.beta")
+alpha.df <- ggs(bundle, family="alpha")
+beta.df <- ggs(bundle, family="betas")
+I.df <- ggs(bundle, family="I")
+tau.beta.df <- ggs(bundle, family="tau.beta")
+p.detect.df <- ggs(bundle, family="p.detect")
+p.include.df <- ggs(bundle, family="p.include")
 
 ggs_Rhat(alpha.df)
 ggs_Rhat(beta.df)
+ggs_Rhat(tau.beta.df)
+ggs_Rhat(p.detect.df)
+ggs_Rhat(p.include.df)
+
+
+x11(height=4, width=11)
+caterplot(bundle, parms="betas", horizontal=F, random=50)
+
+caterplot(bundle, parms="p.detect", horizontal=F)#, val.lim=c(-1, 10))
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+
+################################################
+# Check best model:
+################################################
+
+Ipost <- NULL
+Ipost <- array(dim=c(store*3, Ncov)) # indicator variable array
+for (i in 1:Ncov){
+  string <- paste("I[", i, "]", sep="")
+  Ipost[, i] <- subset(I.df, Parameter==string)$value
+}
+
+# what are the unique models that have nonzero posterior probability?
+uniquemods <- unique(Ipost, MARGIN=1)
+# how many do we have?
+nmods <- dim(uniquemods)[1]
+nmods
+model.probabilities <- rep(NA, nmods)
+for (i in 1:nmods){
+  TFs <- apply(Ipost, 1, function(x) all(x == uniquemods[i,]))
+  model.probabilities[i] <- sum(TFs) / (store*3)
+}
+
+sum(model.probabilities)
+ordered.mod.probs <- model.probabilities[order(-model.probabilities)]
+ordered.mods <- uniquemods[order(-model.probabilities), ]
+
+ordered.mod.probs[1:10]
+ordered.mods[1:5, ]
+
+################################################
+# Check random vs. fixed:
+################################################
+
+median.tau <- NULL
+for(i in 1:Ncov){
+  sub <- subset(tau.beta.df, Parameter==paste("tau.beta[", i, "]", sep=""))$value
+  median.tau[i] <- median(sub)
+}
+median.tau
