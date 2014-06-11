@@ -312,7 +312,7 @@ for(i in 1:Ncov){
   hdi.sd[i, ] <- hdi
 }
 hdi.sd
-# Fixed: ACSA, Elevation2
+# Fixed: ACSA
 # Random: Elevation, LITU, CA, 
 
 
@@ -431,7 +431,7 @@ envir.points <- t(array(colMeans(mlm.envir),c(2,dim(mlm.envir)[2]/2)))
 
 # plot mlm
 par(mfcol=c(1,1))
-x11(height=3, width=3)
+x11(height=5, width=5)
 plot(-mlm.fit,xlab="PC1",ylab="PC2",type="n")
 text(-mlm.fit,label=c(1:(Nobs/Nspecies)),cex=.5)
 
