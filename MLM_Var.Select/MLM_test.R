@@ -161,7 +161,6 @@ library(mcmcplots)
 alpha.df <- ggs(bundle, family="alpha")
 beta.df <- ggs(bundle, family="betas")
 I.df <- ggs(bundle, family="I")
-#tau.beta.df <- ggs(bundle, family="tau.beta")
 sd.beta.df <- ggs(bundle, family="sd.beta.post")
 p.detect.df <- ggs(bundle, family="p.detect")
 p.include.df <- ggs(bundle, family="p.include")
@@ -209,17 +208,96 @@ ordered.mods <- uniquemods[order(-model.probabilities), ]
 ordered.mod.probs[1:10]
 ordered.mods[1:5, ]
 
+# Best model probability: 0.58 (followed by 0.087)
+# Includes variables: c(1,10,11,14,17)
+# Elevation, ACSA, LITU, Ca, Elevation2
+
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+
+################################################
+# Now refit best model:
+################################################
+# (I deleted most of the data, just to save on space)
+
+# X_best for best covariates:
+
+X_best <- X[, c(1,10,11,14,17)]
+Ncov <- ncol(X_best)
+
+# data:
+jags_d_best <- list(Y=Y,
+                    X=X_best,
+                    Species=Species,
+                    Nspecies=Nspecies,
+                    Ncov=Ncov,
+                    Nobs=Nobs,
+                    J=J)
+
+# parameters:
+params_best <- c("alpha", "betas", "p.detect", 
+                "sd.beta.post", "psi")
+
+# initialize model:
+
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+jags.parsamps <- NULL
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
+  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
+  store<-1000
+  nadap<-50000
+  nburn<-50000
+  thin<-50
+  mod <- jags.model(file = "MLM_model_Best.txt", 
+                    data = jags_d_best, n.chains = 1, n.adapt=nadap,
+                    inits = jinits)
+  update(mod, n.iter=nburn)
+  out <- coda.samples(mod, n.iter = store*thin, 
+                      variable.names = params_best, thin=thin)
+  return(out)
+}
+
+bundle_best <- NULL
+bundle_best <- list(jags.parsamps[[1]][[1]],
+               jags.parsamps[[2]][[1]],
+               jags.parsamps[[3]][[1]])
+
+class(bundle_best) <- "mcmc.list"
+
+stopCluster(cl)
+
+################################################
+# Check Convergence:
+################################################
+library(ggmcmc)
+library(mcmcplots)
+alpha.df.best <- ggs(bundle_best, family="alpha")
+beta.df.best <- ggs(bundle_best, family="betas")
+sd.beta.df.best <- ggs(bundle_best, family="sd.beta.post")
+p.detect.df.best <- ggs(bundle_best, family="p.detect")
+
+ggs_Rhat(alpha.df.best)
+ggs_Rhat(beta.df.best)
+ggs_Rhat(sd.beta.df.best)
+ggs_Rhat(p.detect.df.best)
+
+quartz(height=4, width=11)
+#x11(height=4, width=11)
+caterplot(bundle_best, parms="betas", horizontal=F, random=50)
+caterplot(bundle, parms="tau.beta", horizontal=F)
+
 ################################################
 # Check random vs. fixed:
 ################################################
 source(file="HDI.R")
-hdi.var <- array(0, dim=c(Ncov, 2))
+hdi.sd <- array(0, dim=c(Ncov, 2))
 
 for(i in 1:Ncov){
-  sub <- subset(tau.beta.df, Parameter==paste("tau.beta[",i,"]",sep=""))$value
-  hdi <- HDI(sub) #HDI of tau
-  hdi <- 1/hdi #HDI of var
+  sub <- subset(sd.beta.post, Parameter==paste("tau.beta[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev.
   
-  hdi.var[i, ] <- hdi
+  hdi.sd[i, ] <- hdi
 }
-
