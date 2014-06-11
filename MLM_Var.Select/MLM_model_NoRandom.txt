@@ -42,8 +42,5 @@ model {
     betas[j] ~ dnorm(mean.beta[j], tau.beta[j])
   }
   
-  for(j in 1:Ncov){
-    sd.beta.post[j] <- sd(betas[, j])
-  }
   
 }
