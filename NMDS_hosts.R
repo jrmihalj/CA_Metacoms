@@ -36,16 +36,16 @@ snails.mat <- as.matrix(snails.included)
 
 # Make a list with a matrix per year of data:
 Amph.Mats <- list()
-Amph.Mats[[1]] <- amphs.mat[1:83, ]
-Amph.Mats[[2]] <- amphs.mat[84:188, ]
-Amph.Mats[[3]] <- amphs.mat[189:255, ]
-Amph.Mats[[4]] <- amphs.mat[256:289, ]
+Amph.Mats[[1]] <- amphs.mat[1:79, ]
+Amph.Mats[[2]] <- amphs.mat[80:179, ]
+Amph.Mats[[3]] <- amphs.mat[180:240, ]
+Amph.Mats[[4]] <- amphs.mat[241:271, ]
 
 Snails.Mats <- list()
-Snails.Mats[[1]] <- snails.mat[1:83, ]
-Snails.Mats[[2]] <- snails.mat[84:188, ]
-Snails.Mats[[3]] <- snails.mat[189:255, ]
-Snails.Mats[[4]] <- snails.mat[256:289, ]
+Snails.Mats[[1]] <- snails.mat[1:79, ]
+Snails.Mats[[2]] <- snails.mat[80:179, ]
+Snails.Mats[[3]] <- snails.mat[180:240, ]
+Snails.Mats[[4]] <- snails.mat[241:271, ]
 
 ### AMPHIBIANS ###
 # Make sure to remove rows that have no data
@@ -61,7 +61,7 @@ Amph.Mats[[2]] <- Amph.Mats[[2]][-which(rowSums(Amph.Mats[[2]])==0), ]
 Amph2 <- metaMDS(Amph.Mats[[2]], k=3, trymax=300) # Had to use k=3 for this year
 
 Amph.Mats[[3]] <- Amph.Mats[[3]][-which(rowSums(Amph.Mats[[3]])==0), ]
-Amph3 <- metaMDS(Amph.Mats[[3]], k=2, trymax=100)
+Amph3 <- metaMDS(Amph.Mats[[3]], k=2, trymax=500)
 
 Amph.Mats[[4]] <- Amph.Mats[[4]][-which(rowSums(Amph.Mats[[4]])==0), ]
 Amph4 <- metaMDS(Amph.Mats[[4]], k=2, trymax=100)

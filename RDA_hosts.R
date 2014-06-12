@@ -39,16 +39,16 @@ snails.mat <- as.matrix(snails.included)
 
 # Make a list with a matrix per year of data:
 Amph.Mats <- list()
-Amph.Mats[[1]] <- amphs.mat[1:83, ]
-Amph.Mats[[2]] <- amphs.mat[84:188, ]
-Amph.Mats[[3]] <- amphs.mat[189:255, ]
-Amph.Mats[[4]] <- amphs.mat[256:289, ]
+Amph.Mats[[1]] <- amphs.mat[1:79, ]
+Amph.Mats[[2]] <- amphs.mat[80:179, ]
+Amph.Mats[[3]] <- amphs.mat[180:240, ]
+Amph.Mats[[4]] <- amphs.mat[241:271, ]
 
 Snails.Mats <- list()
-Snails.Mats[[1]] <- snails.mat[1:83, ]
-Snails.Mats[[2]] <- snails.mat[84:188, ]
-Snails.Mats[[3]] <- snails.mat[189:255, ]
-Snails.Mats[[4]] <- snails.mat[256:289, ]
+Snails.Mats[[1]] <- snails.mat[1:79, ]
+Snails.Mats[[2]] <- snails.mat[80:179, ]
+Snails.Mats[[3]] <- snails.mat[180:240, ]
+Snails.Mats[[4]] <- snails.mat[241:271, ]
 
 ### AMPHIBIANS ###
 # Conduct RDA:
@@ -66,20 +66,13 @@ colnames(Amph_RA) <- c("Amph_RA1", "Amph_RA2")
 
 ### SNAILS ###
 
-# CA-CORTE_2009 has missing values; must remove
-which(rownames(Snails.Mats[[1]])=="CA-CORTE_2009") # Row 19
-Snails.Mats[[1]] <- Snails.Mats[[1]][-19, ]
-# Remove "Beaver_2009" because no snails present:
-Snails.Mats[[1]] <- Snails.Mats[[1]][-3, ]
 
+Snails.Mats[[1]] <- Snails.Mats[[1]][c(-which(rowSums(Snails.Mats[[1]])==0), 18), ]
 Snails1 <- decorana(Snails.Mats[[1]], ira=1)
 print(Snails1)
 Snails1$rproj
 
-# Some have zero sums:
-which(rowSums(Snails.Mats[[2]])==0)
-# Remove
-Snails.Mats[[2]] <- Snails.Mats[[2]][-c(4,40,42,55,82,83,91,99,100), ]
+Snails.Mats[[2]] <- Snails.Mats[[2]][-which(rowSums(Snails.Mats[[2]])==0), ]
 Snails2 <- decorana(Snails.Mats[[2]], ira=1)
 
 # Some have zero sums:
