@@ -20,7 +20,7 @@ params <- c("alpha", "betas", "I", "p.detect",
 
 jinits <- function() {
   list(
-    z=ifelse(Y > 0, 1, 0),
+    z=ifelse(Y_2009 > 0, 1, 0),
     .RNG.name=c("base::Super-Duper"),
     .RNG.seed=as.numeric(randomNumbers(n = 1, min = 1, max = 1e+06, col=1))
   )
@@ -34,9 +34,9 @@ registerDoParallel(cl)
 
 jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
-  setwd("~/GitHub/MLM_EcologyInSilico")
+  #setwd("~/GitHub/MLM_EcologyInSilico")
   store<-1000
-  nadap<-20000
+  nadap<-50000
   nburn<-50000
   thin<-50
   mod <- jags.model(file = "MLM_model.txt", 

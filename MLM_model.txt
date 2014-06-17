@@ -10,15 +10,14 @@ model {
     sd.beta[j] ~ dnorm(0, .001)T(0,100) # each covariate has a uncorrelated beta stdev.
     tau.beta[j] <- pow(sd.beta[j]+0.001, -2)
 
-    #lp.include[j] ~ dnorm(logit(p.include.mean), p.include.tau)T(-12,12)
-    #p.include[j] <-  1/(1+exp(-lp.include[j]))
+    p.include[j] ~  dbeta(1,1)
   }
   
   # Heirarchical Priors #
   psi.mean ~ dbeta(1,1)
   p.detect.mean ~ dbeta(1,1)
   #p.include.mean ~ dbeta(1,1)
-  p.include ~ dbeta(1,1)
+  #p.include ~ dbeta(1,1)
 
   meta.mean.beta ~ dnorm(0,0.01)
   meta.sd.beta ~ dunif(0,50)
@@ -45,7 +44,7 @@ model {
   
   # Deal with covariates:
   for(j in 1:Ncov){
-    I[j] ~ dbern(p.include)
+    I[j] ~ dbern(p.include[j])
 
     for(i in 1:Nspecies){
       beta.full[i,j] ~ dnorm(mean.beta[j], tau.beta[j])
@@ -56,6 +55,31 @@ model {
   for(j in 1:Ncov){
     sd.beta.post[j] <- sd(betas[, j])
   }
+  #--------------------------------------------------------------------------
+  #--------------------------------------------------------------------------
+  
+  # Deal with missing data:
 
+  ## Missing data priors:
+  #-------------------------------------------------------------------------------
+  for(cov in 1:11){
+    sd.x[cov] ~ dunif(0,10)
+    Prec.x[cov] <- pow(sd.x[cov],-2)
+  }
+  
+  p.hydro[1] <- 1/3; p.hydro[2] <- 1/3; p.hydro[3] <- 1/3
+
+
+  # Missing covariates:
+
+  for(cov in 1:11){
+    for(k in 1:Nobs){
+      X[k, cov] ~ dnorm(0, Prec.x[cov])
+    }
+  }
+  
+  for(k in 1:Nobs){
+    X[k, 22] ~ dcat(p.hydro[])
+  }
    
 }

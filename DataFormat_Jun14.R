@@ -241,12 +241,12 @@ colnames(X)
 # Format for Bayesian model:
 # First Separate by year:
 
-Xcov_2009 <- X[1:79, ]
+Xcov_2009 <- X[c(1:18, 20:79), ] # Remove CA-CORTE-2009 (almost all data missing)
 Xcov_2010 <- X[80:179, ]
 Xcov_2011 <- X[180:240, ]
 Xcov_2012 <- X[241:271, ]
 
-Yobs_2009 <- Y.obs[, 1:79] # Remove Clin, Fib, Thic
+Yobs_2009 <- Y.obs[, c(1:18, 20:79)] # Remove Clin, Fib, Thic
 Yobs_2010 <- Y.obs[, 80:179] # ^ Same
 Yobs_2011 <- Y.obs[, 180:240] # Remove Clin, Thic
 Yobs_2012 <- Y.obs[, 241:271] # Remove Clin, Fib, Thic
@@ -277,11 +277,11 @@ X_2012 <- array(0, dim=c(Nsite_2012*Nspecies_2012, Ncov))
 
 # Do the following for each year:
 t <- 1; i <- 1
-TT <- Nsite_2012
-while(i <= Nspecies_2012){
-  X_2012[t:TT, ] <- Xcov_2012
-  t <- t+Nsite_2012
-  TT <- TT + Nsite_2012
+TT <- Nsite_2009
+while(i <= Nspecies_2009){
+  X_2009[t:TT, ] <- Xcov_2009
+  t <- t+Nsite_2009
+  TT <- TT + Nsite_2009
   i <- i+1
 }
 
@@ -298,12 +298,12 @@ Y_2011 <- NULL
 Y_2012 <- NULL
 
 # Do this for each year:
-for(i in 1:Nspecies_2012){
-  Y_2012 <- c(Y_2012, Yobs_2012[i, ])
+for(i in 1:Nspecies_2009){
+  Y_2009 <- c(Y_2009, Yobs_2009[i, ])
 }
 
 # All sites surveyed same # times:
-J_2009 <- rep(J[1:79], times=Nspecies_2009*Nsite_2009)
+J_2009 <- rep(J[c(1:18, 20:79)], times=Nspecies_2009*Nsite_2009)
 J_2010 <- rep(J[80:179], times=Nspecies_2010*Nsite_2010)
 J_2011 <- rep(J[180:240], times=Nspecies_2011*Nsite_2011)
 J_2012 <- rep(J[241:271], times=Nspecies_2012*Nsite_2012)
