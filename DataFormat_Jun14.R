@@ -133,6 +133,12 @@ for (i in 1:length(unique(PSRE.included$site.yr))){ # number of sites:
   }
 }
 
+# Need to remove some sites that have too many missing covariates:
+# BigPR_2009 (4), CA-CORTE_2009 (19),
+# GDPND013_2010 (117), GDPND015_2010 (119)
+# NTalkGCP_2012 (254)
+Y.obs <- Y.obs[, -c(4,19,117,119,254)]
+
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
 ##############################################################################################################
@@ -140,23 +146,19 @@ for (i in 1:length(unique(PSRE.included$site.yr))){ # number of sites:
 # 2. Create a site-by-covariate-by-year array:
 
 # Import covariate file:
-# Covariates.csv
+# Covariates2.csv
 
 Cov <- read.csv(file.choose(), header=T)
 
 # I've used the following covariates:
 colnames(Cov)
-# [1] "Site"       "Year"       "Elev"       "WET"       
-# [5] "pH"         "veg_s"      "Canopy"     "Cond"      
-# [9] "Salin"      "DOmg"       "TotalN"     "TotalP"    
-# [13] "Amph_Rich"  "Snail_Rich" "AMCA"       "BUBO"      
-# [17] "PSRE"       "RACA"       "RADR"       "TATO"      
-# [21] "PHySA"      "LyMN"       "HELI"       "GyRA"      
-# [25] "RADIX"      "hydro" 
+# [1] "Site"       "Year"       "Lat"        "Long"       "Elev"      
+# [6] "Slope"      "Aspect"     "FOR"        "SSG"        "area"      
+# [11] "veg_s"      "OpenW"      "fish"       "Cond"       "TDS"       
+# [16] "DOmg"       "Amph_Rich"  "Snail_Rich" "AMCA"       "BUBO"      
+# [21] "PSRE"       "RACA"       "RADR"       "TATO"       "PHySA"     
+# [26] "LyMN"       "HELI"       "GyRA"       "RADIX"      "hydro"
 
-# Columns 15 - 25 are pres/abs of host sp
-
-# Column 26 is hydro with levels: Permanent, Semi-permanent, Temporary
 # Make hydro into dummy variables:
 levels(Cov$hydro)[1] <- 1 # Permanent
 levels(Cov$hydro)[2] <- 2 # Semi-permanent
@@ -167,9 +169,9 @@ Cov$site.yr <- paste(Cov$Site, "_", Cov$Year, sep="")
 
 # Subset all the relevant sites:
 Cov.multiyear <- data.frame()
-for(i in 1:length(unique(PSRE.included$site.yr))){
+for(i in 1:ncol(Y.obs)){
   sub <- NULL
-  sub <- subset(Cov, site.yr==unique(PSRE.included$site.yr)[i])
+  sub <- subset(Cov, site.yr==colnames(Y.obs)[i])
   Cov.multiyear <- rbind(Cov.multiyear, sub)
 }
 
@@ -178,13 +180,14 @@ Cov.multiyear <- Cov.multiyear[, -c(1:2)]
 
 # Store values into a site x covariate x year array to match Y.obs:
 X <- NULL
-X <- array(0, dim=c(length(unique(PSRE.included$site.yr)), ncol(Cov.multiyear)-1))
+X <- array(0, dim=c(ncol(Y.obs), ncol(Cov.multiyear)-1))
 colnames(X) <- colnames(Cov.multiyear)[1:ncol(Cov.multiyear)-1]
-rownames(X) <- unique(PSRE.included$site.yr)
+rownames(X) <- colnames(Y.obs)
 
-for(i in 1:length(unique(PSRE.included$site.yr))){
+for(i in 1:ncol(Y.obs)){
   sub <- NULL
-  sub <- subset(Cov.multiyear, site.yr==unique(PSRE.included$site.yr)[i], select=Elev:hydro)
+  sub <- subset(Cov.multiyear, site.yr==colnames(Y.obs)[i], select=Lat:hydro)
+  
   for(j in 1:ncol(X)){
     X[i, j] <- sub[1, j]
   }
@@ -193,18 +196,19 @@ for(i in 1:length(unique(PSRE.included$site.yr))){
 # DATA CLEAN UP:
 
 # Need to log transform:
-# WET (2), Canopy (5), Cond (6), Salin (7), DOmg (8), 
-# TotalN (9), TotalP (10)
-# Square-root trans: Elev (1), Amph_Rich (11),
+# Area (8), OpenW (10), Cond (12), TDS (13), DOmg (14)
+# Square-root trans: Elev (3), Slope(4), Amph_Rich (15),
 
-need.log <- c(2,5,6,7,8,9,10)
-need.sqrt <- c(1, 11)
+need.log <- c(8,10,12,13,14)
+need.sqrt <- c(3,4,15)
 
 for(i in need.log){X[,i] <- log(X[,i]+1)}
 for(i in need.sqrt){X[,i] <- sqrt(X[,i])}
 
+# Rearrange a bit:
+X <- X[, c(1:10, 12:16, 11, 17:28)]
 # Standardize each covariate: (value - mean) / 2sd
-for(j in 1:12){ # all the non-factor level covariates
+for(j in 1:15){ # all the non-factor level covariates
   X[, j] <- (X[, j] - mean(X[, j], na.rm=T)) / (2 * sd(X[, j], na.rm=T))
 }
 # X[which(X=="NaN")] <- NA
@@ -221,18 +225,22 @@ X <- X[, -c(13:23)]
 #X <- X[, c(1:12, 14:21, 13)]
 
 # Look for collinearity:
-cor(X[, c(1:12)], use="complete.obs")
+cor(X[, c(1:15)], use="complete.obs")
 quartz(height=10, width=10)
-pairs(X[,c(1:12)])
+pairs(X[,c(1:15)])
 
-# Conductivity and Salinity very correlated: rho=0.74
-# TotalN and TotalP very correlated: rho=0.69
-# Remove Conductivity and TotalP
-X <- X[, -c(6, 10)]
+# Conductivity and TDS are correlated
+# FOR and SSG very correlated 
+# Remove TDS and SSG
+X <- X[, -c(7, 12)]
 
 # Finalized Covariates:
 colnames(X)
-
+# [1] "Lat"        "Long"       "Elev"       "Slope"      "Aspect"     "FOR"       
+# [7] "area"       "veg_s"      "OpenW"      "Cond"       "DOmg"       "Amph_Rich" 
+# [13] "Snail_Rich" "fish"       "AMCA"       "BUBO"       "PSRE"       "RACA"      
+# [19] "RADR"       "TATO"       "PHySA"      "LyMN"       "HELI"       "GyRA"      
+# [25] "RADIX"      "hydro" 
 
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
@@ -241,20 +249,26 @@ colnames(X)
 # Format for Bayesian model:
 # First Separate by year:
 
-Xcov_2009 <- X[c(1:18, 20:79), ] # Remove CA-CORTE-2009 (almost all data missing)
-Xcov_2010 <- X[80:179, ]
-Xcov_2011 <- X[180:240, ]
-Xcov_2012 <- X[241:271, ]
+Xcov_2009 <- X[1:77, ]
+Xcov_2010 <- X[78:175, ]
+Xcov_2011 <- X[176:236, ]
+Xcov_2012 <- X[237:266, ]
 
-Yobs_2009 <- Y.obs[, c(1:18, 20:79)] # Remove Clin, Fib, Thic
-Yobs_2010 <- Y.obs[, 80:179] # ^ Same
-Yobs_2011 <- Y.obs[, 180:240] # Remove Clin, Thic
-Yobs_2012 <- Y.obs[, 241:271] # Remove Clin, Fib, Thic
+Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Thic
+Yobs_2010 <- Y.obs[, 78:175] # ^ Same
+Yobs_2011 <- Y.obs[, 176:236] # Remove Clin, Thic
+Yobs_2012 <- Y.obs[, 237:266] # Remove Clin, Fib, Thic
 
 Yobs_2009 <- Yobs_2009[-c(2,3,8), ]
 Yobs_2010 <- Yobs_2010[-c(2,3,8), ]
 Yobs_2011 <- Yobs_2011[-c(2,8), ]
 Yobs_2012 <- Yobs_2012[-c(2,3,8), ]
+
+# All sites surveyed same # times:
+J_2009 <- rep(J[1:77], times=Nspecies_2009*Nsite_2009)
+J_2010 <- rep(J[78:175], times=Nspecies_2010*Nsite_2010)
+J_2011 <- rep(J[176:236], times=Nspecies_2011*Nsite_2011)
+J_2012 <- rep(J[237:266], times=Nspecies_2012*Nsite_2012)
 
 Nsite_2009 <- nrow(Xcov_2009)
 Nsite_2010 <- nrow(Xcov_2010)
@@ -301,13 +315,6 @@ Y_2012 <- NULL
 for(i in 1:Nspecies_2009){
   Y_2009 <- c(Y_2009, Yobs_2009[i, ])
 }
-
-# All sites surveyed same # times:
-J_2009 <- rep(J[c(1:18, 20:79)], times=Nspecies_2009*Nsite_2009)
-J_2010 <- rep(J[80:179], times=Nspecies_2010*Nsite_2010)
-J_2011 <- rep(J[180:240], times=Nspecies_2011*Nsite_2011)
-J_2012 <- rep(J[241:271], times=Nspecies_2012*Nsite_2012)
-
 
 # Number of total observations
 Nobs_2009 <- Nspecies_2009*Nsite_2009

@@ -1,76 +1,50 @@
 model {
   ### PRIORS ###
+  psi.mean ~ dbeta(1,1)
+  p.detect.mean ~ dbeta(1,1)
+
+  sd.psi ~ dunif(0,10)
+  psi.tau <- pow(sd.psi, -2)
+  
+  sd.p.detect ~ dunif(0,10)
+  p.detect.tau <- pow(sd.p.detect, -2)
+
   for(i in 1:Nspecies){
     alpha[i] ~ dnorm(logit(psi.mean), psi.tau)T(-12,12)
     lp.detect[i] ~ dnorm(logit(p.detect.mean), p.detect.tau)T(-12,12)
-    p.detect[i] <-  1/(1+exp(-lp.detect[i]))
+    p.detect[i] <- exp(lp.detect[i]) / (1 + exp(lp.detect[i]))
   }
+  
   for(j in 1:Ncov){
-    mean.beta[j] ~ dnorm(meta.mean.beta, meta.tau.beta)
-    sd.beta[j] ~ dnorm(0, .001)T(0,100) # each covariate has a uncorrelated beta stdev.
+    mean.beta[j] ~ dnorm(0, 0.01)
+    sd.beta[j] ~ dunif(0, 10)
     tau.beta[j] <- pow(sd.beta[j]+0.001, -2)
-
-    p.include[j] ~  dbeta(1,1)
+    for(i in 1:Nspecies){
+      betas[i,j] ~ dnorm(mean.beta[j], tau.beta[j])
+    }
   }
-  
-  # Heirarchical Priors #
-  psi.mean ~ dbeta(1,1)
-  p.detect.mean ~ dbeta(1,1)
-  #p.include.mean ~ dbeta(1,1)
-  #p.include ~ dbeta(1,1)
-
-  meta.mean.beta ~ dnorm(0,0.01)
-  meta.sd.beta ~ dunif(0,50)
-  meta.tau.beta <- pow(meta.sd.beta, -2)
-
-  sd.psi ~ dunif(0,50)
-  psi.tau <- pow(sd.psi, -2)
-  
-  sd.p.detect ~ dunif(0,50)
-  p.detect.tau <- pow(sd.p.detect, -2)
-
-  sd.p.include ~ dunif(0,50)
-  p.include.tau <- pow(sd.p.include, -2)
-
-  #--------------------------------------------------------------------------
-  #--------------------------------------------------------------------------
-
-  # Likelihood model:
+ #------------------------------------------------------------------------------
+ #------------------------------------------------------------------------------
+  # Likelihood
   for(i in 1:Nobs){
     logit(psi[i]) <- alpha[Species[i]] + inprod(betas[Species[i],], X[i, ])
     z[i] ~ dbern(psi[i])
-    Y[i] ~ dbinom(z[i]*p.detect[Species[i]], J[i])
+    Y[i] ~ dbinom(z[i] * p.detect[Species[i]], J[i])
   }
-  
-  # Deal with covariates:
-  for(j in 1:Ncov){
-    I[j] ~ dbern(p.include[j])
-
-    for(i in 1:Nspecies){
-      beta.full[i,j] ~ dnorm(mean.beta[j], tau.beta[j])
-      betas[i,j] <- I[j] * beta.full[i,j]
-    }
-  }
-
+ 
+  # Store beta st.dev.
   for(j in 1:Ncov){
     sd.beta.post[j] <- sd(betas[, j])
   }
-  #--------------------------------------------------------------------------
-  #--------------------------------------------------------------------------
+ #--------------------------------------------------------------------------
+ #--------------------------------------------------------------------------
   
   # Deal with missing data:
 
-  ## Missing data priors:
-  #-------------------------------------------------------------------------------
   for(cov in 1:11){
     sd.x[cov] ~ dunif(0,10)
     Prec.x[cov] <- pow(sd.x[cov],-2)
   }
-  
-  p.hydro[1] <- 1/3; p.hydro[2] <- 1/3; p.hydro[3] <- 1/3
-
-
-  # Missing covariates:
 
   for(cov in 1:11){
     for(k in 1:Nobs){
@@ -78,8 +52,5 @@ model {
     }
   }
   
-  for(k in 1:Nobs){
-    X[k, 22] ~ dcat(p.hydro[])
-  }
    
 }
