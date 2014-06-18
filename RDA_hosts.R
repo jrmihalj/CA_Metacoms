@@ -19,10 +19,10 @@ snails <- snails[order(snails$year), ]
 amphs.included <- data.frame()
 snails.included <- data.frame()
 
-for(i in 1:length(unique(PSRE.included$site.yr))){
+for(i in 1:ncol(Y.obs)){
   sub1 <- NULL; sub2 <- NULL
-  sub1 <- subset(amphs, site.yr==unique(PSRE.included$site.yr)[i])
-  sub2 <- subset(snails, site.yr==unique(PSRE.included$site.yr)[i])
+  sub1 <- subset(amphs, site.yr==colnames(Y.obs)[i])
+  sub2 <- subset(snails, site.yr==colnames(Y.obs)[i])
   amphs.included <- rbind(amphs.included, sub1)
   snails.included <- rbind(snails.included, sub2)
 }
@@ -39,19 +39,20 @@ snails.mat <- as.matrix(snails.included)
 
 # Make a list with a matrix per year of data:
 Amph.Mats <- list()
-Amph.Mats[[1]] <- amphs.mat[1:79, ]
-Amph.Mats[[2]] <- amphs.mat[80:179, ]
-Amph.Mats[[3]] <- amphs.mat[180:240, ]
-Amph.Mats[[4]] <- amphs.mat[241:271, ]
+Amph.Mats[[1]] <- amphs.mat[1:77, ]
+Amph.Mats[[2]] <- amphs.mat[78:175, ]
+Amph.Mats[[3]] <- amphs.mat[176:236, ]
+Amph.Mats[[4]] <- amphs.mat[237:266, ]
 
 Snails.Mats <- list()
-Snails.Mats[[1]] <- snails.mat[1:79, ]
-Snails.Mats[[2]] <- snails.mat[80:179, ]
-Snails.Mats[[3]] <- snails.mat[180:240, ]
-Snails.Mats[[4]] <- snails.mat[241:271, ]
+Snails.Mats[[1]] <- snails.mat[1:77, ]
+Snails.Mats[[2]] <- snails.mat[78:175, ]
+Snails.Mats[[3]] <- snails.mat[176:236, ]
+Snails.Mats[[4]] <- snails.mat[237:266, ]
 
 ### AMPHIBIANS ###
 # Conduct RDA:
+library(vegan)
 Amph1 <- decorana(Amph.Mats[[1]], ira=1)
 print(Amph1)
 Amph1$rproj
@@ -66,8 +67,7 @@ colnames(Amph_RA) <- c("Amph_RA1", "Amph_RA2")
 
 ### SNAILS ###
 
-
-Snails.Mats[[1]] <- Snails.Mats[[1]][c(-which(rowSums(Snails.Mats[[1]])==0), 18), ]
+Snails.Mats[[1]] <- Snails.Mats[[1]][c(-which(rowSums(Snails.Mats[[1]])==0)), ]
 Snails1 <- decorana(Snails.Mats[[1]], ira=1)
 print(Snails1)
 Snails1$rproj
@@ -75,16 +75,10 @@ Snails1$rproj
 Snails.Mats[[2]] <- Snails.Mats[[2]][-which(rowSums(Snails.Mats[[2]])==0), ]
 Snails2 <- decorana(Snails.Mats[[2]], ira=1)
 
-# Some have zero sums:
-which(rowSums(Snails.Mats[[3]])==0)
-# Remove
-Snails.Mats[[3]] <- Snails.Mats[[3]][-c(21,46,47,56), ]
+Snails.Mats[[3]] <- Snails.Mats[[3]][-which(rowSums(Snails.Mats[[3]])==0), ]
 Snails3 <- decorana(Snails.Mats[[3]], ira=1)
 
-# Some have zero sums:
-which(rowSums(Snails.Mats[[4]])==0)
-# Remove
-Snails.Mats[[4]] <- Snails.Mats[[4]][-c(3,5,20,21,29), ]
+Snails.Mats[[4]] <- Snails.Mats[[4]][-which(rowSums(Snails.Mats[[4]])==0), ]
 Snails4 <- decorana(Snails.Mats[[4]], ira=1)
 
 # Combine into one data.frame
@@ -95,18 +89,18 @@ Snails_RA$site.yr <- rownames(Snails_RA)
 
 # Fill in the blanks for Snails (the sites that had no snails present)
 
-site.yr <- unique(PSRE.included$site.yr)
+site.yr <- colnames(Y.obs)
 Snails_RA_fixed <- data.frame(site.yr)
 Snails_RA_fixed$Snails_RA1 <- rep(0, nrow(Snails_RA_fixed))
 Snails_RA_fixed$Snails_RA2 <- rep(0, nrow(Snails_RA_fixed))
 
-for(i in 1:length(unique(PSRE.included$site.yr))){
+for(i in 1:ncol(Y.obs)){
   sub <- NULL
-  sub <- subset(Snails_RA, site.yr==unique(PSRE.included$site.yr)[i])
+  sub <- subset(Snails_RA, site.yr==colnames(Y.obs)[i])
   if(nrow(sub)==0){
     Snails_RA_fixed[i, 2:3] <- c(NA, NA)
   }else{
-    Snails_RA_fixed[i, 2:3] <- Snails_RA[which(Snails_RA$site.yr==unique(PSRE.included$site.yr)[i]), 1:2]
+    Snails_RA_fixed[i, 2:3] <- Snails_RA[which(Snails_RA$site.yr==colnames(Y.obs)[i]), 1:2]
   }
 }
 

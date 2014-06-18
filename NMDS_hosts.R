@@ -16,10 +16,10 @@ snails <- snails[order(snails$Year), ]
 amphs.included <- data.frame()
 snails.included <- data.frame()
 
-for(i in 1:length(unique(PSRE.included$site.yr))){
+for(i in 1:ncol(Y.obs)){
   sub1 <- NULL; sub2 <- NULL
-  sub1 <- subset(amphs, Site_yr==unique(PSRE.included$site.yr)[i])
-  sub2 <- subset(snails, Site_yr==unique(PSRE.included$site.yr)[i])
+  sub1 <- subset(amphs, Site_yr==colnames(Y.obs)[i])
+  sub2 <- subset(snails, Site_yr==colnames(Y.obs)[i])
   amphs.included <- rbind(amphs.included, sub1)
   snails.included <- rbind(snails.included, sub2)
 }
@@ -36,16 +36,16 @@ snails.mat <- as.matrix(snails.included)
 
 # Make a list with a matrix per year of data:
 Amph.Mats <- list()
-Amph.Mats[[1]] <- amphs.mat[1:79, ]
-Amph.Mats[[2]] <- amphs.mat[80:179, ]
-Amph.Mats[[3]] <- amphs.mat[180:240, ]
-Amph.Mats[[4]] <- amphs.mat[241:271, ]
+Amph.Mats[[1]] <- amphs.mat[1:77, ]
+Amph.Mats[[2]] <- amphs.mat[78:175, ]
+Amph.Mats[[3]] <- amphs.mat[176:236, ]
+Amph.Mats[[4]] <- amphs.mat[237:266, ]
 
 Snails.Mats <- list()
-Snails.Mats[[1]] <- snails.mat[1:79, ]
-Snails.Mats[[2]] <- snails.mat[80:179, ]
-Snails.Mats[[3]] <- snails.mat[180:240, ]
-Snails.Mats[[4]] <- snails.mat[241:271, ]
+Snails.Mats[[1]] <- snails.mat[1:77, ]
+Snails.Mats[[2]] <- snails.mat[78:175, ]
+Snails.Mats[[3]] <- snails.mat[176:236, ]
+Snails.Mats[[4]] <- snails.mat[237:266, ]
 
 ### AMPHIBIANS ###
 # Make sure to remove rows that have no data
@@ -58,10 +58,10 @@ print(Amph1)
 Amph1$points
 
 Amph.Mats[[2]] <- Amph.Mats[[2]][-which(rowSums(Amph.Mats[[2]])==0), ]
-Amph2 <- metaMDS(Amph.Mats[[2]], k=3, trymax=300) # Had to use k=3 for this year
+Amph2 <- metaMDS(Amph.Mats[[2]], k=2, trymax=100)
 
 Amph.Mats[[3]] <- Amph.Mats[[3]][-which(rowSums(Amph.Mats[[3]])==0), ]
-Amph3 <- metaMDS(Amph.Mats[[3]], k=2, trymax=500)
+Amph3 <- metaMDS(Amph.Mats[[3]], k=2, trymax=300)
 
 Amph.Mats[[4]] <- Amph.Mats[[4]][-which(rowSums(Amph.Mats[[4]])==0), ]
 Amph4 <- metaMDS(Amph.Mats[[4]], k=2, trymax=100)
@@ -98,7 +98,7 @@ colnames(Snails_NMDS) <- c("Snails_MDS1", "Snails_MDS2")
 
 # Fill in the blanks (the sites that had no data)
 
-site.yr <- unique(PSRE.included$site.yr)
+site.yr <- colnames(Y.obs)
 Snails_NMDS$site.yr <- rownames(Snails_NMDS)
 Amph_NMDS$site.yr <- rownames(Amph_NMDS)
 
@@ -110,20 +110,20 @@ Snails_NMDS_fixed$Snails_MDS2 <- rep(0, nrow(Snails_NMDS_fixed))
 Amph_NMDS_fixed$Amph_MDS1 <- rep(0, nrow(Amph_NMDS_fixed))
 Amph_NMDS_fixed$Amph_MDS2 <- rep(0, nrow(Amph_NMDS_fixed))
 
-for(i in 1:length(unique(PSRE.included$site.yr))){
+for(i in 1:ncol(Y.obs)){
   sub1 <- NULL; sub2 <- NULL
-  sub1 <- subset(Snails_NMDS, site.yr==unique(PSRE.included$site.yr)[i])
-  sub2 <- subset(Amph_NMDS, site.yr==unique(PSRE.included$site.yr)[i])
+  sub1 <- subset(Snails_NMDS, site.yr==colnames(Y.obs)[i])
+  sub2 <- subset(Amph_NMDS, site.yr==colnames(Y.obs)[i])
   if(nrow(sub1)==0){
     Snails_NMDS_fixed[i, 2:3] <- c(NA, NA)
   }else{
-    Snails_NMDS_fixed[i, 2:3] <- Snails_NMDS[which(Snails_NMDS$site.yr==unique(PSRE.included$site.yr)[i]), 1:2]
+    Snails_NMDS_fixed[i, 2:3] <- Snails_NMDS[which(Snails_NMDS$site.yr==colnames(Y.obs)[i]), 1:2]
   }
   
   if(nrow(sub2)==0){
     Amph_NMDS_fixed[i, 2:3] <- c(NA, NA)
   }else{
-    Amph_NMDS_fixed[i, 2:3] <- Amph_NMDS[which(Amph_NMDS$site.yr==unique(PSRE.included$site.yr)[i]), 1:2]
+    Amph_NMDS_fixed[i, 2:3] <- Amph_NMDS[which(Amph_NMDS$site.yr==colnames(Y.obs)[i]), 1:2]
   }
 }
 

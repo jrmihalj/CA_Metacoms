@@ -42,12 +42,12 @@ model {
   
   # Deal with missing data:
 
-  for(cov in 1:11){
+  for(cov in 1:19){
     sd.x[cov] ~ dunif(0,10)
     Prec.x[cov] <- pow(sd.x[cov],-2)
   }
 
-  for(cov in 1:11){
+  for(cov in 1:19){
     for(k in 1:Nobs){
       X[k, cov] ~ dnorm(0, Prec.x[cov])
     }

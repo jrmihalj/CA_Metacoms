@@ -213,21 +213,22 @@ for(j in 1:15){ # all the non-factor level covariates
 }
 # X[which(X=="NaN")] <- NA
 
-# # Insert the NMDS results:
-# X <- data.frame(X, Amph_NMDS_fixed[,2:3], Snails_NMDS_fixed[,2:3])
-# 
-# # Insert the reciprocal averaging results:
-# X <- data.frame(X, Amph_RA, Snails_RA_fixed[,2:3])
+# Insert the NMDS results:
+X <- data.frame(X, Amph_NMDS_fixed[,2:3], Snails_NMDS_fixed[,2:3])
+
+# Insert the reciprocal averaging results:
+X <- data.frame(X, Amph_RA, Snails_RA_fixed[,2:3])
 
 # Remove the pres/abs of hosts:
-X <- X[, -c(13:23)]
-# Re-arrange a bit:
-#X <- X[, c(1:12, 14:21, 13)]
+X <- X[, -c(15:25)]
+
+# Rearrange a bit:
+X <- X[, c(1:11, 16:23, 12:15)]
 
 # Look for collinearity:
-cor(X[, c(1:15)], use="complete.obs")
+cor(X[, c(12:21)], use="complete.obs")
 quartz(height=10, width=10)
-pairs(X[,c(1:15)])
+pairs(X[,c(12:21)])
 
 # Conductivity and TDS are correlated
 # FOR and SSG very correlated 
@@ -236,11 +237,11 @@ X <- X[, -c(7, 12)]
 
 # Finalized Covariates:
 colnames(X)
-# [1] "Lat"        "Long"       "Elev"       "Slope"      "Aspect"     "FOR"       
-# [7] "area"       "veg_s"      "OpenW"      "Cond"       "DOmg"       "Amph_Rich" 
-# [13] "Snail_Rich" "fish"       "AMCA"       "BUBO"       "PSRE"       "RACA"      
-# [19] "RADR"       "TATO"       "PHySA"      "LyMN"       "HELI"       "GyRA"      
-# [25] "RADIX"      "hydro" 
+# [1] "Lat"         "Long"        "Elev"        "Slope"       "Aspect"     
+# [6] "FOR"         "area"        "veg_s"       "OpenW"       "Cond"       
+# [11] "DOmg"        "Amph_RA1"    "Amph_RA2"    "Snails_RA1"  "Snails_RA2" 
+# [16] "Amph_MDS1"   "Amph_MDS2"   "Snails_MDS1" "Snails_MDS2" "Amph_Rich"  
+# [21] "Snail_Rich"  "fish"        "hydro" 
 
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
@@ -249,10 +250,10 @@ colnames(X)
 # Format for Bayesian model:
 # First Separate by year:
 
-Xcov_2009 <- X[1:77, ]
-Xcov_2010 <- X[78:175, ]
-Xcov_2011 <- X[176:236, ]
-Xcov_2012 <- X[237:266, ]
+Xcov_2009 <- as.matrix(X[1:77, ])
+Xcov_2010 <- as.matrix(X[78:175, ])
+Xcov_2011 <- as.matrix(X[176:236, ])
+Xcov_2012 <- as.matrix(X[237:266, ])
 
 Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Thic
 Yobs_2010 <- Y.obs[, 78:175] # ^ Same
@@ -291,12 +292,12 @@ X_2012 <- array(0, dim=c(Nsite_2012*Nspecies_2012, Ncov))
 
 # Do the following for each year:
 t <- 1; i <- 1
-TT <- Nsite_2009
-while(i <= Nspecies_2009){
-  X_2009[t:TT, ] <- Xcov_2009
-  t <- t+Nsite_2009
-  TT <- TT + Nsite_2009
-  i <- i+1
+TT <- Nsite_2012
+while(i <= Nspecies_2012){
+  X_2012[t:TT, ] <- Xcov_2012
+  t <- t + Nsite_2012
+  TT <- TT + Nsite_2012
+  i <- i + 1
 }
 
 # Species
