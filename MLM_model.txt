@@ -20,7 +20,7 @@ model {
     sd.beta[j] ~ dunif(0, 10)
     tau.beta[j] <- pow(sd.beta[j]+0.001, -2)
     for(i in 1:Nspecies){
-      betas[i,j] ~ dnorm(mean.beta[j], tau.beta[j])
+      betas[i,j] ~ dnorm(mean.beta[j], tau.beta[j])T(-12,12)
     }
   }
  #------------------------------------------------------------------------------
@@ -32,8 +32,9 @@ model {
     Y[i] ~ dbinom(z[i] * p.detect[Species[i]], J[i])
   }
  
-  # Store beta st.dev.
+  # Store beta mean and st.dev.
   for(j in 1:Ncov){
+    mean.beta.post[j] <- mean(betas[, j])
     sd.beta.post[j] <- sd(betas[, j])
   }
  #--------------------------------------------------------------------------

@@ -16,7 +16,7 @@ jags_d <- list(Y=Y_2009,
 
 # parameters:
 params <- c("alpha", "betas", "I", "p.detect", 
-            "p.include", "sd.beta.post")
+            "p.include", "sd.beta.post", "mean.beta.post")
 
 jinits <- function() {
   list(
@@ -37,7 +37,7 @@ jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   #setwd("~/GitHub/MLM_EcologyInSilico")
   store<-1000
   nadap<-50000
-  nburn<-50000
+  nburn<-80000
   thin<-50
   mod <- jags.model(file = "MLM_model.txt", 
                     data = jags_d, n.chains = 1, n.adapt=nadap,
@@ -65,53 +65,55 @@ library(ggmcmc)
 library(mcmcplots)
 alpha.df <- ggs(bundle, family="alpha")
 beta.df <- ggs(bundle, family="betas")
-I.df <- ggs(bundle, family="I")
+#I.df <- ggs(bundle, family="I")
 sd.beta.df <- ggs(bundle, family="sd.beta.post")
+mean.beta.df <- ggs(bundle, family="mean.beta.post")
 p.detect.df <- ggs(bundle, family="p.detect")
-p.include.df <- ggs(bundle, family="p.include")
+#p.include.df <- ggs(bundle, family="p.include")
 
 ggs_Rhat(alpha.df)
 ggs_Rhat(beta.df)
 ggs_Rhat(sd.beta.df)
 ggs_Rhat(p.detect.df)
-ggs_Rhat(p.include.df)
+ggs_Rhat(mean.beta.df)
+#ggs_Rhat(p.include.df)
 
 quartz(height=4, width=11)
 x11(height=4, width=11)
-caterplot(bundle, parms="betas", horizontal=F, random=50)
+caterplot(bundle, parms="betas", horizontal=F)#, random=50)
 
-caterplot(bundle, parms="sd.beta.post", horizontal=F)
+caterplot(bundle, parms="alpha", horizontal=F)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
-
-################################################
-# Check best model:
-################################################
-
-Ipost <- NULL
-Ipost <- array(dim=c(store*3, Ncov)) # indicator variable array
-for (i in 1:Ncov){
-  string <- paste("I[", i, "]", sep="")
-  Ipost[, i] <- subset(I.df, Parameter==string)$value
-}
-
-# what are the unique models that have nonzero posterior probability?
-uniquemods <- unique(Ipost, MARGIN=1)
-# how many do we have?
-nmods <- dim(uniquemods)[1]
-nmods
-model.probabilities <- rep(NA, nmods)
-for (i in 1:nmods){
-  TFs <- apply(Ipost, 1, function(x) all(x == uniquemods[i,]))
-  model.probabilities[i] <- sum(TFs) / (store*3)
-}
-
-sum(model.probabilities)
-ordered.mod.probs <- model.probabilities[order(-model.probabilities)]
-ordered.mods <- uniquemods[order(-model.probabilities), ]
-
-ordered.mod.probs
-ordered.mods
+# 
+# ################################################
+# # Check best model:
+# ################################################
+# 
+# Ipost <- NULL
+# Ipost <- array(dim=c(store*3, Ncov)) # indicator variable array
+# for (i in 1:Ncov){
+#   string <- paste("I[", i, "]", sep="")
+#   Ipost[, i] <- subset(I.df, Parameter==string)$value
+# }
+# 
+# # what are the unique models that have nonzero posterior probability?
+# uniquemods <- unique(Ipost, MARGIN=1)
+# # how many do we have?
+# nmods <- dim(uniquemods)[1]
+# nmods
+# model.probabilities <- rep(NA, nmods)
+# for (i in 1:nmods){
+#   TFs <- apply(Ipost, 1, function(x) all(x == uniquemods[i,]))
+#   model.probabilities[i] <- sum(TFs) / (store*3)
+# }
+# 
+# sum(model.probabilities)
+# ordered.mod.probs <- model.probabilities[order(-model.probabilities)]
+# ordered.mods <- uniquemods[order(-model.probabilities), ]
+# 
+# ordered.mod.probs
+# ordered.mods
 
 # Best model probability: 0.986, next 0.0057
 # Includes variables: 1-5
