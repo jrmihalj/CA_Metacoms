@@ -205,13 +205,6 @@ need.sqrt <- c(3,4,15)
 for(i in need.log){X[,i] <- log(X[,i]+1)}
 for(i in need.sqrt){X[,i] <- sqrt(X[,i])}
 
-# Rearrange a bit:
-X <- X[, c(1:10, 12:16, 11, 17:28)]
-# Standardize each covariate: (value - mean) / 2sd
-for(j in 1:15){ # all the non-factor level covariates
-  X[, j] <- (X[, j] - mean(X[, j], na.rm=T)) / (2 * sd(X[, j], na.rm=T))
-}
-# X[which(X=="NaN")] <- NA
 
 # Insert the NMDS results:
 X <- data.frame(X, Amph_NMDS_fixed[,2:3], Snails_NMDS_fixed[,2:3])
@@ -220,28 +213,18 @@ X <- data.frame(X, Amph_NMDS_fixed[,2:3], Snails_NMDS_fixed[,2:3])
 X <- data.frame(X, Amph_RA, Snails_RA_fixed[,2:3])
 
 # Remove the pres/abs of hosts:
-X <- X[, -c(15:25)]
+X <- X[, -c(17:27)]
 
 # Rearrange a bit:
-X <- X[, c(1:11, 16:23, 12:15)]
-
-# Look for collinearity:
-cor(X[, c(12:21)], use="complete.obs")
-quartz(height=10, width=10)
-pairs(X[,c(12:21)])
-
-# Conductivity and TDS are correlated
-# FOR and SSG very correlated 
-# Remove TDS and SSG
-X <- X[, -c(7, 12)]
+X <- X[, c(1:10, 12:16, 18:25, 11, 17)]
 
 # Finalized Covariates:
 colnames(X)
 # [1] "Lat"         "Long"        "Elev"        "Slope"       "Aspect"     
-# [6] "FOR"         "area"        "veg_s"       "OpenW"       "Cond"       
-# [11] "DOmg"        "Amph_RA1"    "Amph_RA2"    "Snails_RA1"  "Snails_RA2" 
-# [16] "Amph_MDS1"   "Amph_MDS2"   "Snails_MDS1" "Snails_MDS2" "Amph_Rich"  
-# [21] "Snail_Rich"  "fish"        "hydro" 
+# [6] "FOR"         "SSG"         "area"        "veg_s"       "OpenW"      
+# [11] "Cond"        "TDS"         "DOmg"        "Amph_Rich"   "Snail_Rich" 
+# [16] "Amph_MDS1"   "Amph_MDS2"   "Snails_MDS1" "Snails_MDS2" "Amph_RA1"   
+# [21] "Amph_RA2"    "Snails_RA1"  "Snails_RA2"  "fish"        "hydro"
 
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
@@ -254,32 +237,38 @@ Xcov_2009 <- as.matrix(X[1:77, ])
 Xcov_2010 <- as.matrix(X[78:175, ])
 Xcov_2011 <- as.matrix(X[176:236, ])
 Xcov_2012 <- as.matrix(X[237:266, ])
+Xcov_all <- as.matrix(X)
 
 Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Thic
 Yobs_2010 <- Y.obs[, 78:175] # ^ Same
 Yobs_2011 <- Y.obs[, 176:236] # Remove Clin, Thic
 Yobs_2012 <- Y.obs[, 237:266] # Remove Clin, Fib, Thic
+Yobs_all <- Y.obs #Remove Thic
 
 Yobs_2009 <- Yobs_2009[-c(2,3,8), ]
 Yobs_2010 <- Yobs_2010[-c(2,3,8), ]
 Yobs_2011 <- Yobs_2011[-c(2,8), ]
 Yobs_2012 <- Yobs_2012[-c(2,3,8), ]
+Yobs_all <- Yobs_all[-8, ]
+
+Nsite_2009 <- nrow(Xcov_2009)
+Nsite_2010 <- nrow(Xcov_2010)
+Nsite_2011 <- nrow(Xcov_2011)
+Nsite_2012 <- nrow(Xcov_2012)
+Nsite_all <- nrow(Xcov_all)
+
+Nspecies_2009 <- nrow(Yobs_2009)
+Nspecies_2010 <- nrow(Yobs_2010)
+Nspecies_2011 <- nrow(Yobs_2011)
+Nspecies_2012 <- nrow(Yobs_2012)
+Nspecies_all <- nrow(Yobs_all)
 
 # All sites surveyed same # times:
 J_2009 <- rep(J[1:77], times=Nspecies_2009*Nsite_2009)
 J_2010 <- rep(J[78:175], times=Nspecies_2010*Nsite_2010)
 J_2011 <- rep(J[176:236], times=Nspecies_2011*Nsite_2011)
 J_2012 <- rep(J[237:266], times=Nspecies_2012*Nsite_2012)
-
-Nsite_2009 <- nrow(Xcov_2009)
-Nsite_2010 <- nrow(Xcov_2010)
-Nsite_2011 <- nrow(Xcov_2011)
-Nsite_2012 <- nrow(Xcov_2012)
-
-Nspecies_2009 <- nrow(Yobs_2009)
-Nspecies_2010 <- nrow(Yobs_2010)
-Nspecies_2011 <- nrow(Yobs_2011)
-Nspecies_2012 <- nrow(Yobs_2012)
+J_all <- rep(J, times=Nspecies_all*Nsite_all)
 
 Ncov <- ncol(X)
 
@@ -289,14 +278,15 @@ X_2009 <- array(0, dim=c(Nsite_2009*Nspecies_2009, Ncov))
 X_2010 <- array(0, dim=c(Nsite_2010*Nspecies_2010, Ncov))
 X_2011 <- array(0, dim=c(Nsite_2011*Nspecies_2011, Ncov))
 X_2012 <- array(0, dim=c(Nsite_2012*Nspecies_2012, Ncov))
+X_all <- array(0, dim=c(Nsite_all*Nspecies_all, Ncov))
 
 # Do the following for each year:
 t <- 1; i <- 1
-TT <- Nsite_2012
-while(i <= Nspecies_2012){
-  X_2012[t:TT, ] <- Xcov_2012
-  t <- t + Nsite_2012
-  TT <- TT + Nsite_2012
+TT <- Nsite_2009
+while(i <= Nspecies_2009){
+  X_2009[t:TT, ] <- Xcov_2009
+  t <- t + Nsite_2009
+  TT <- TT + Nsite_2009
   i <- i + 1
 }
 
@@ -305,16 +295,18 @@ Species_2009 <- rep(c(1:Nspecies_2009), each=Nsite_2009)
 Species_2010 <- rep(c(1:Nspecies_2010), each=Nsite_2010)
 Species_2011 <- rep(c(1:Nspecies_2011), each=Nsite_2011)
 Species_2012 <- rep(c(1:Nspecies_2012), each=Nsite_2012)
+Species_all <- rep(c(1:Nspecies_all), each=Nsite_all)
 
 # Observations/data:
 Y_2009 <- NULL
 Y_2010 <- NULL
 Y_2011 <- NULL
 Y_2012 <- NULL
+Y_all <- NULL
 
 # Do this for each year:
-for(i in 1:Nspecies_2009){
-  Y_2009 <- c(Y_2009, Yobs_2009[i, ])
+for(i in 1:Nspecies_all){
+  Y_all <- c(Y_all, Yobs_all[i, ])
 }
 
 # Number of total observations
@@ -322,7 +314,7 @@ Nobs_2009 <- Nspecies_2009*Nsite_2009
 Nobs_2010 <- Nspecies_2010*Nsite_2010
 Nobs_2011 <- Nspecies_2011*Nsite_2011
 Nobs_2012 <- Nspecies_2012*Nsite_2012
-
+Nobs_all <- Nspecies_all*Nsite_all
 
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------

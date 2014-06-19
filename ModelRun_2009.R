@@ -1,3 +1,30 @@
+colnames(X_2009) <- colnames(X)
+
+# Standardize each covariate: (value - mean) / 2sd
+for(j in 1:15){ # all the non-factor level covariates
+  X_2009[, j] <- (X_2009[, j] - mean(X_2009[, j], na.rm=T)) / (2 * sd(X_2009[, j], na.rm=T))
+}
+
+# Look for collinearity:
+cor(X_2009, use="complete.obs")
+x11(height=10, width=13)
+pairs(X_2009[,c(6:10, 14:23)])
+
+#Collinearity:
+#Lat-long 
+#Long-Elev (quadratic)
+#FOR-SSG
+#Cond-TDS
+#Amph_RA1 - SSG
+#Amph_RA1 - Amph_MDS1
+#Amph_Rich - Amph_RA2
+
+
+# REMOVE: Long, Elev, SSG, FOR, Amph_MDS1, Amph_RA2, TDS
+
+X_2009 <- X_2009[, -c(2,3,6,7,12,16,21)]
+
+Ncov_2009 <- ncol(X_2009)
 ################################################
 # JAGS model run:
 ################################################
@@ -10,7 +37,7 @@ jags_d <- list(Y=Y_2009,
                X=X_2009,
                Species=Species_2009,
                Nspecies=Nspecies_2009,
-               Ncov=Ncov,
+               Ncov=Ncov_2009,
                Nobs=Nobs_2009,
                J=J_2009)
 
@@ -82,7 +109,7 @@ quartz(height=4, width=11)
 x11(height=4, width=11)
 caterplot(bundle, parms="betas", horizontal=F)#, random=50)
 
-caterplot(bundle, parms="alpha", horizontal=F)
+caterplot(bundle, parms="mean.beta.post", horizontal=F)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 # 
