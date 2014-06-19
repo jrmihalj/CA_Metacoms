@@ -237,7 +237,17 @@ Xcov_2009 <- as.matrix(X[1:77, ])
 Xcov_2010 <- as.matrix(X[78:175, ])
 Xcov_2011 <- as.matrix(X[176:236, ])
 Xcov_2012 <- as.matrix(X[237:266, ])
-Xcov_all <- as.matrix(X)
+
+# For all years combined, need to add proper RDA and NMDS results:
+Xcov_all <- X[, -c(16:23)]
+
+Xcov_all <- data.frame(Xcov_all, Amph_NMDS_all_fixed[,2:3], Snails_NMDS_all_fixed[,2:3],
+                    Amph_RA_all, Snails_RA_all_fixed[,2:3])
+
+Xcov_all <- as.matrix(Xcov_all)
+#Rearrange:
+Xcov_all <- Xcov_all[, c(1:15, 18:25, 16, 17)]
+
 
 Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Thic
 Yobs_2010 <- Y.obs[, 78:175] # ^ Same
@@ -282,11 +292,11 @@ X_all <- array(0, dim=c(Nsite_all*Nspecies_all, Ncov))
 
 # Do the following for each year:
 t <- 1; i <- 1
-TT <- Nsite_2009
-while(i <= Nspecies_2009){
-  X_2009[t:TT, ] <- Xcov_2009
-  t <- t + Nsite_2009
-  TT <- TT + Nsite_2009
+TT <- Nsite_all
+while(i <= Nspecies_all){
+  X_all[t:TT, ] <- Xcov_all
+  t <- t + Nsite_all
+  TT <- TT + Nsite_all
   i <- i + 1
 }
 
