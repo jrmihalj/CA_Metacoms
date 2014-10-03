@@ -72,10 +72,10 @@ nrow(PSRE) # 3066 individuals
 # Remove the unused columns
 PSRE <- PSRE[, -c(3:8, rem_cols)]
 
-# Remove non-trematode species:
-nontrem <- c(9:11)
-PSRE <- PSRE[, -nontrem]
-
+# # Remove non-trematode species:
+# nontrem <- c(9:11)
+# PSRE <- PSRE[, -nontrem]
+#### I DECIDED NOT TO REMOVE NON-TREMATODES
 
 # Make columns for site and year labels:
 PSRE$site.yr <- as.character(PSRE$site.yr)
@@ -249,17 +249,17 @@ Xcov_all <- as.matrix(Xcov_all)
 Xcov_all <- Xcov_all[, c(1:15, 18:25, 16, 17)]
 
 
-Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Thic
-Yobs_2010 <- Y.obs[, 78:175] # ^ Same
-Yobs_2011 <- Y.obs[, 176:236] # Remove Clin, Thic
-Yobs_2012 <- Y.obs[, 237:266] # Remove Clin, Fib, Thic
+Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Nyct, Pinw, Thic
+Yobs_2010 <- Y.obs[, 78:175] # Remove Clin, Fib, Pinw, Thic
+Yobs_2011 <- Y.obs[, 176:236] # Remove Clin, Pinw, Thic
+Yobs_2012 <- Y.obs[, 237:266] # Remove Clin, Fib, Nyct, Opal, Pinw, Thic
 Yobs_all <- Y.obs #Remove Thic
 
-Yobs_2009 <- Yobs_2009[-c(2,3,8), ]
-Yobs_2010 <- Yobs_2010[-c(2,3,8), ]
-Yobs_2011 <- Yobs_2011[-c(2,8), ]
-Yobs_2012 <- Yobs_2012[-c(2,3,8), ]
-Yobs_all <- Yobs_all[-8, ]
+Yobs_2009 <- Yobs_2009[-c(2,3,7,9,11), ]
+Yobs_2010 <- Yobs_2010[-c(2,3,9,11), ]
+Yobs_2011 <- Yobs_2011[-c(2,9,11), ]
+Yobs_2012 <- Yobs_2012[-c(2,3,7:9,11), ]
+Yobs_all <- Yobs_all[-11, ]
 
 Nsite_2009 <- nrow(Xcov_2009)
 Nsite_2010 <- nrow(Xcov_2010)
@@ -315,8 +315,8 @@ Y_2012 <- NULL
 Y_all <- NULL
 
 # Do this for each year:
-for(i in 1:Nspecies_all){
-  Y_all <- c(Y_all, Yobs_all[i, ])
+for(i in 1:Nspecies_2012){
+  Y_2012 <- c(Y_2012, Yobs_2012[i, ])
 }
 
 # Number of total observations
