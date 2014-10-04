@@ -114,38 +114,43 @@ caterplot(bundle, parms="betas", horizontal=F)#, random=50)
 caterplot(bundle, parms="mean.beta.post", horizontal=F)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
-# 
 # ################################################
 # # Check best model:
 # ################################################
-# 
-# Ipost <- NULL
-# Ipost <- array(dim=c(store*3, Ncov)) # indicator variable array
-# for (i in 1:Ncov){
-#   string <- paste("I[", i, "]", sep="")
-#   Ipost[, i] <- subset(I.df, Parameter==string)$value
-# }
-# 
-# # what are the unique models that have nonzero posterior probability?
-# uniquemods <- unique(Ipost, MARGIN=1)
-# # how many do we have?
-# nmods <- dim(uniquemods)[1]
-# nmods
-# model.probabilities <- rep(NA, nmods)
-# for (i in 1:nmods){
-#   TFs <- apply(Ipost, 1, function(x) all(x == uniquemods[i,]))
-#   model.probabilities[i] <- sum(TFs) / (store*3)
-# }
-# 
-# sum(model.probabilities)
-# ordered.mod.probs <- model.probabilities[order(-model.probabilities)]
-# ordered.mods <- uniquemods[order(-model.probabilities), ]
-# 
-# ordered.mod.probs
-# ordered.mods
 
-# Best model probability: 0.986, next 0.0057
-# Includes variables: 1-5
+# Check to see which covariate effects (slopes) != 0
+
+source(file="HDI.R")
+hdi.mean <- array(0, dim=c(Ncov_2011, 2))
+
+for(i in 1:Ncov_2011){
+  sub <- subset(mean.beta.df, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.mean[i, ] <- hdi
+}
+hdi.mean
+
+# Which do not include zero?
+# 1-Lat, 9-Amph_Rich, 10-Snail_Rich, 11-Amph_MDS1, 13-Amph_RA1
+# 14-Amph_RA2, 15-Snails_RA2, 16-Fish
+
+# Check to see which covariate effects are significantly random (st.dev > 0)
+
+hdi.sd <- array(0, dim=c(Ncov_2011, 2))
+
+for(i in 1:Ncov_2011){
+  sub <- subset(sd.beta.df, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.sd[i, ] <- hdi
+}
+hdi.sd
+
+# Which are greater than zero?
+# 1,13-16, also: 
+# 3-Aspect, 5-area, 6-veg_s, 8-DOmg
+
 
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
@@ -153,32 +158,26 @@ caterplot(bundle, parms="mean.beta.post", horizontal=F)
 ################################################
 # Now refit best model:
 ################################################
-# (I deleted most of the data, just to save on space)
 
 # X_best for best covariates:
 
-X_best <- X[, c(1:5)]
-Ncov <- ncol(X_best)
+X_2011_best <- X_2011[, c(1,3,5,6,8,9:11,13:16)]
+Ncov_2011_best <- ncol(X_2011_best)
 
 # data:
-jags_d_best <- list(Y=Y,
-                    X=X_best,
-                    Species=Species,
-                    Nspecies=Nspecies,
-                    Ncov=Ncov,
-                    Nobs=Nobs,
-                    J=J)
+jags_d_best <- list(Y=Y_2011,
+                    X=X_2011_best,
+                    Species=Species_2011,
+                    Nspecies=Nspecies_2011,
+                    Ncov=Ncov_2011_best,
+                    Nobs=Nobs_2011,
+                    J=J_2011)
 
 # parameters:
 params_best <- c("alpha", "betas", "p.detect", 
-                 "sd.beta.post", "psi")
-jinits <- function() {
-  list(
-    z=ifelse(Y > 0, 1, 0),
-    .RNG.name=c("base::Super-Duper"),
-    .RNG.seed=as.numeric(randomNumbers(n = 1, min = 1, max = 1e+06, col=1))
-  )
-}
+                 "sd.beta.post", "mean.beta.post", "psi", 
+                 "z")
+
 # initialize model:
 
 library(doParallel)
@@ -189,10 +188,10 @@ jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
   store<-1000
-  nadap<-20000
+  nadap<-50000
   nburn<-50000
   thin<-50
-  mod <- jags.model(file = "MLM_model_Best.txt", 
+  mod <- jags.model(file = "MLM_model.txt", 
                     data = jags_d_best, n.chains = 1, n.adapt=nadap,
                     inits = jinits)
   update(mod, n.iter=nburn)
@@ -218,8 +217,10 @@ library(mcmcplots)
 alpha.df.best <- ggs(bundle_best, family="alpha")
 beta.df.best <- ggs(bundle_best, family="betas")
 sd.beta.df.best <- ggs(bundle_best, family="sd.beta.post")
+mean.beta.df.best <- ggs(bundle_best, family="mean.beta.post")
 p.detect.df.best <- ggs(bundle_best, family="p.detect")
 psi.df.best <- ggs(bundle_best, family="psi")
+z.df.best <- ggs(bundle_best, family="z")
 
 ggs_Rhat(alpha.df.best)
 ggs_Rhat(beta.df.best)
@@ -229,27 +230,42 @@ ggs_Rhat(p.detect.df.best)
 quartz(height=4, width=11)
 x11(height=4, width=11)
 caterplot(bundle_best, parms="betas", horizontal=F)
-caterpoints(as.vector(Beta)[1:(Nspecies*Ncov)], horizontal=F)
+caterplot(bundle_best, parms="mean.beta.post", horizontal=F)
 caterplot(bundle_best, parms="sd.beta.post", horizontal=F)
 
 ################################################
 # Check random vs. fixed:
 ################################################
-# If 95 HDI of st.dev. of beta[j] overlaps zero, then fixed effect.
-# (i.e. no significant variability in effect among species)
 
-source(file="HDI.R")
-hdi.sd <- array(0, dim=c(Ncov, 2))
+# Check slopes (Fixed effects)
 
-for(i in 1:Ncov){
+hdi.mean.best <- array(0, dim=c(Ncov_2011_best, 2))
+
+for(i in 1:Ncov_2011_best){
+  sub <- subset(mean.beta.df.best, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.mean.best[i, ] <- hdi
+}
+hdi.mean.best
+
+# Which do not include zero?
+# 4-veg_s, 6-Amph_Rich, 7-Snail_Rich, 8-Amph_MDS1, 
+# 10-Amph_RA2, 11-Snails_RA2, 12-Fish
+
+# Check st.dev (Random Effects)
+
+hdi.sd.best <- array(0, dim=c(Ncov_2011_best, 2))
+
+for(i in 1:Ncov_2011_best){
   sub <- subset(sd.beta.df.best, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
   hdi <- HDI(sub) #HDI of st.dev. for each covariate
   
-  hdi.sd[i, ] <- hdi
+  hdi.sd.best[i, ] <- hdi
 }
-hdi.sd
-# The model estimated that only covariate 5 has a fixed effect
+hdi.sd.best
 
+#1,3,4,9-12
 
 ################################################
 # Extract 'linear predictor' of the model: logit(psi)

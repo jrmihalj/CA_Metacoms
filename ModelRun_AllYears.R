@@ -7,15 +7,20 @@ for(j in 1:15){ # all the non-factor level covariates
 # Look for collinearity:
 cor(X_all, use="complete.obs")
 x11(height=10, width=15)
-pairs(X_all[, c(1:13,25)])
+pairs(X_all[, c(14:25)])
 pairs(X_all[,c(6:10, 14:23)])
 
-# lots of Collinearity
+# Collinearity:
+# Lat - Long
+# Long - Elev
+# FOR - SSG
+# Cond - TDS
+# SnailsRA1 - SnailsMDS2
+# SnailsRA2 - Snail Rich
 
-# REMOVE: Lat, Long, Elev, area, Cond, TDS, veg_s, 
-# slope, FOR, SSG, SnailRich, SnailMDS2, SnailRA1, AmphRA1, AmphRA2, AmphMDS2
+# REMOVE: Long, Elev, SSG, TDS, Snails_MDS2, Snails_RA2
 
-X_all <- X_all[, -c(1:4,6:9,11,12,15,17:22)]
+X_all <- X_all[, -c(2,3,7,12,19,22)]
 
 Ncov_all <- ncol(X_all)
 ################################################

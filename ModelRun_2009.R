@@ -24,6 +24,9 @@ pairs(X_2009[,c(6:10, 14:23)])
 
 X_2009 <- X_2009[, -c(2,3,6,7,12,16,21)]
 
+# Remove Fish:
+X_2009 <- X_2009[, -17]
+
 Ncov_2009 <- ncol(X_2009)
 ################################################
 # JAGS model run:
@@ -42,8 +45,9 @@ jags_d <- list(Y=Y_2009,
                J=J_2009)
 
 # parameters:
-params <- c("alpha", "betas", "I", "p.detect", 
-            "p.include", "sd.beta.post", "mean.beta.post")
+params <- c("alpha", "betas", "p.detect", 
+            "p.include", "sd.beta.post", "mean.beta.post",
+            "z")
 
 jinits <- function() {
   list(
@@ -62,8 +66,8 @@ registerDoParallel(cl)
 jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   #setwd("~/GitHub/MLM_EcologyInSilico")
-  store<-1000
-  nadap<-50000
+  store<-1500
+  nadap<-80000
   nburn<-80000
   thin<-50
   mod <- jags.model(file = "MLM_model.txt", 
@@ -74,12 +78,12 @@ jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   return(out)
 }
 
-bundle <- NULL
-bundle <- list(jags.parsamps[[1]][[1]],
+bundle_full <- NULL
+bundle_full <- list(jags.parsamps[[1]][[1]],
                jags.parsamps[[2]][[1]],
                jags.parsamps[[3]][[1]])
 
-class(bundle) <- "mcmc.list"
+class(bundle_full) <- "mcmc.list"
 
 stopCluster(cl)
 #--------------------------------------------------------------------------
@@ -90,13 +94,11 @@ stopCluster(cl)
 ################################################
 library(ggmcmc)
 library(mcmcplots)
-alpha.df <- ggs(bundle, family="alpha")
-beta.df <- ggs(bundle, family="betas")
-#I.df <- ggs(bundle, family="I")
-sd.beta.df <- ggs(bundle, family="sd.beta.post")
-mean.beta.df <- ggs(bundle, family="mean.beta.post")
-p.detect.df <- ggs(bundle, family="p.detect")
-#p.include.df <- ggs(bundle, family="p.include")
+alpha.df <- ggs(bundle_full, family="alpha")
+beta.df <- ggs(bundle_full, family="betas")
+sd.beta.df <- ggs(bundle_full, family="sd.beta.post")
+mean.beta.df <- ggs(bundle_full, family="mean.beta.post")
+p.detect.df <- ggs(bundle_full, family="p.detect")
 
 ggs_Rhat(alpha.df)
 ggs_Rhat(beta.df)
@@ -107,76 +109,82 @@ ggs_Rhat(mean.beta.df)
 
 quartz(height=4, width=11)
 x11(height=4, width=11)
-caterplot(bundle, parms="betas", horizontal=F)#, random=50)
+caterplot(bundle_full, parms="betas", horizontal=F)#, random=50)
 
-caterplot(bundle, parms="mean.beta.post", horizontal=F)
+caterplot(bundle_full, parms="sd.beta.post", horizontal=F)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
-# 
 # ################################################
-# # Check best model:
+# # Calculate WAIC for full model:
 # ################################################
-# 
-# Ipost <- NULL
-# Ipost <- array(dim=c(store*3, Ncov)) # indicator variable array
-# for (i in 1:Ncov){
-#   string <- paste("I[", i, "]", sep="")
-#   Ipost[, i] <- subset(I.df, Parameter==string)$value
-# }
-# 
-# # what are the unique models that have nonzero posterior probability?
-# uniquemods <- unique(Ipost, MARGIN=1)
-# # how many do we have?
-# nmods <- dim(uniquemods)[1]
-# nmods
-# model.probabilities <- rep(NA, nmods)
-# for (i in 1:nmods){
-#   TFs <- apply(Ipost, 1, function(x) all(x == uniquemods[i,]))
-#   model.probabilities[i] <- sum(TFs) / (store*3)
-# }
-# 
-# sum(model.probabilities)
-# ordered.mod.probs <- model.probabilities[order(-model.probabilities)]
-# ordered.mods <- uniquemods[order(-model.probabilities), ]
-# 
-# ordered.mod.probs
-# ordered.mods
+source(file="calc_waic.R")
 
-# Best model probability: 0.986, next 0.0057
-# Includes variables: 1-5
+WAIC_full <- calc_waic(bundle_full, jags_d)
+WAIC_full$WAIC
+# 1274.447
 
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+# ################################################
+# # Check 'best' model:
+# ################################################
+
+# Check to see which covariate effects (slopes) != 0
+
+source(file="HDI.R")
+hdi.mean <- array(0, dim=c(Ncov_2009, 2))
+
+for(i in 1:Ncov_2009){
+  sub <- subset(mean.beta.df, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.mean[i, ] <- hdi
+}
+hdi.mean
+
+# Which do not include zero?
+# Amph_MDS2 (11)
+
+# Check to see which covariate effects are significantly random (st.dev > 0)
+
+hdi.sd <- array(0, dim=c(Ncov_2009, 2))
+
+for(i in 1:Ncov_2009){
+  sub <- subset(sd.beta.df, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.sd[i, ] <- hdi
+}
+hdi.sd
+
+# Which are greater than zero?
+# Aspect (3), Snails_RA1 (15)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
 ################################################
-# Now refit best model:
+# Now refit reduced model:
 ################################################
-# (I deleted most of the data, just to save on space)
 
-# X_best for best covariates:
+# X_reduced for reduced covariates:
 
-X_best <- X[, c(1:5)]
-Ncov <- ncol(X_best)
+X_2009_reduced <- X_2009[, c(3,11,12,15)]
+Ncov_2009_reduced <- ncol(X_2009_reduced)
 
 # data:
-jags_d_best <- list(Y=Y,
-                    X=X_best,
-                    Species=Species,
-                    Nspecies=Nspecies,
-                    Ncov=Ncov,
-                    Nobs=Nobs,
-                    J=J)
+jags_d_reduced <- list(Y=Y_2009,
+                    X=X_2009_reduced,
+                    Species=Species_2009,
+                    Nspecies=Nspecies_2009,
+                    Ncov=Ncov_2009_reduced,
+                    Nobs=Nobs_2009,
+                    J=J_2009)
 
 # parameters:
-params_best <- c("alpha", "betas", "p.detect", 
-                 "sd.beta.post", "psi")
-jinits <- function() {
-  list(
-    z=ifelse(Y > 0, 1, 0),
-    .RNG.name=c("base::Super-Duper"),
-    .RNG.seed=as.numeric(randomNumbers(n = 1, min = 1, max = 1e+06, col=1))
-  )
-}
+params_reduced <- c("alpha", "betas", "p.detect", 
+                 "sd.beta.post", "mean.beta.post", "psi", 
+                 "z")
+
 # initialize model:
 
 library(doParallel)
@@ -186,25 +194,25 @@ registerDoParallel(cl)
 jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
-  store<-1000
-  nadap<-20000
-  nburn<-50000
+  store<-1500
+  nadap<-80000
+  nburn<-80000
   thin<-50
-  mod <- jags.model(file = "MLM_model_Best.txt", 
-                    data = jags_d_best, n.chains = 1, n.adapt=nadap,
+  mod <- jags.model(file = "MLM_model.txt", 
+                    data = jags_d_reduced, n.chains = 1, n.adapt=nadap,
                     inits = jinits)
   update(mod, n.iter=nburn)
   out <- coda.samples(mod, n.iter = store*thin, 
-                      variable.names = params_best, thin=thin)
+                      variable.names = params_reduced, thin=thin)
   return(out)
 }
 
-bundle_best <- NULL
-bundle_best <- list(jags.parsamps[[1]][[1]],
+bundle_reduced <- NULL
+bundle_reduced <- list(jags.parsamps[[1]][[1]],
                     jags.parsamps[[2]][[1]],
                     jags.parsamps[[3]][[1]])
 
-class(bundle_best) <- "mcmc.list"
+class(bundle_reduced) <- "mcmc.list"
 
 stopCluster(cl)
 
@@ -213,52 +221,114 @@ stopCluster(cl)
 ################################################
 library(ggmcmc)
 library(mcmcplots)
-alpha.df.best <- ggs(bundle_best, family="alpha")
-beta.df.best <- ggs(bundle_best, family="betas")
-sd.beta.df.best <- ggs(bundle_best, family="sd.beta.post")
-p.detect.df.best <- ggs(bundle_best, family="p.detect")
-psi.df.best <- ggs(bundle_best, family="psi")
+alpha.df.reduced <- ggs(bundle_reduced, family="alpha")
+beta.df.reduced <- ggs(bundle_reduced, family="betas")
+sd.beta.df.reduced <- ggs(bundle_reduced, family="sd.beta.post")
+mean.beta.df.reduced <- ggs(bundle_reduced, family="mean.beta.post")
+p.detect.df.reduced <- ggs(bundle_reduced, family="p.detect")
+psi.df.reduced <- ggs(bundle_reduced, family="psi")
+z.df.reduced <- ggs(bundle_reduced, family="z")
 
-ggs_Rhat(alpha.df.best)
-ggs_Rhat(beta.df.best)
-ggs_Rhat(sd.beta.df.best)
-ggs_Rhat(p.detect.df.best)
+ggs_Rhat(alpha.df.reduced)
+ggs_Rhat(beta.df.reduced)
+ggs_Rhat(sd.beta.df.reduced)
+ggs_Rhat(p.detect.df.reduced)
 
 quartz(height=4, width=11)
 x11(height=4, width=11)
-caterplot(bundle_best, parms="betas", horizontal=F)
-caterpoints(as.vector(Beta)[1:(Nspecies*Ncov)], horizontal=F)
-caterplot(bundle_best, parms="sd.beta.post", horizontal=F)
+caterplot(bundle_reduced, parms="betas", horizontal=F)
+caterplot(bundle_reduced, parms="mean.beta.post", horizontal=F)
+caterplot(bundle_reduced, parms="sd.beta.post", horizontal=F)
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+# ################################################
+# # Calculate WAIC for reduced model:
+# ################################################
+source(file="calc_waic.R")
+
+WAIC_reduced <- calc_waic(bundle_reduced, jags_d_reduced)
+WAIC_reduced$WAIC
+# 1253.187 Slightly better
+
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+#Remove 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ################################################
 # Check random vs. fixed:
 ################################################
-# If 95 HDI of st.dev. of beta[j] overlaps zero, then fixed effect.
-# (i.e. no significant variability in effect among species)
 
-source(file="HDI.R")
-hdi.sd <- array(0, dim=c(Ncov, 2))
+# Check slopes (Fixed effects)
 
-for(i in 1:Ncov){
-  sub <- subset(sd.beta.df.best, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+hdi.mean.reduced <- array(0, dim=c(Ncov_2009_reduced, 2))
+
+for(i in 1:Ncov_2009_reduced){
+  sub <- subset(mean.beta.df.reduced, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
   hdi <- HDI(sub) #HDI of st.dev. for each covariate
   
-  hdi.sd[i, ] <- hdi
+  hdi.mean.reduced[i, ] <- hdi
 }
-hdi.sd
-# The model estimated that only covariate 5 has a fixed effect
+hdi.mean.reduced
+
+# Which do not include zero?
+# Amph_MDS2 (2), Fish (4)
+
+# Check st.dev (Random Effects)
+
+hdi.sd.reduced <- array(0, dim=c(Ncov_2009_reduced, 2))
+
+for(i in 1:Ncov_2009_reduced){
+  sub <- subset(sd.beta.df.reduced, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.sd.reduced[i, ] <- hdi
+}
+hdi.sd.reduced
+
+# Only Fish (4)
 
 
 ################################################
 # Extract 'linear predictor' of the model: logit(psi)
 ################################################
 
-linpred.best <- NULL
+linpred.reduced <- NULL
 
 for(i in 1:Nobs){
-  sub <- subset(psi.df.best, Parameter==paste("psi[", i, "]", sep=""))$value
+  sub <- subset(psi.df.reduced, Parameter==paste("psi[", i, "]", sep=""))$value
   sub <- log(sub/(1-sub))
-  linpred.best[i] <- mean(sub)
+  linpred.reduced[i] <- mean(sub)
 }
 
 #--------------------------------------------------------------------------

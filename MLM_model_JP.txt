@@ -1,0 +1,77 @@
+model {
+  ### PRIORS ###
+  psi.mean ~ dbeta(1,1)
+  p.detect.mean ~ dbeta(1,1)
+  
+  sd.psi ~ dunif(0,10)
+  psi.tau <- pow(sd.psi, -2)
+  
+  sd.p.detect ~ dunif(0,10)
+  p.detect.tau <- pow(sd.p.detect, -2)
+  
+  for(i in 1:Nspecies){
+    alpha[i] ~ dnorm(logit(psi.mean), psi.tau)T(-12,12)
+    lp.detect[i] ~ dnorm(logit(p.detect.mean), p.detect.tau)T(-12,12)
+    p.detect[i] <- exp(lp.detect[i]) / (1 + exp(lp.detect[i]))
+  }
+  
+  # Jeffreys' Prior for adaptive shrinkage
+  
+  for(j in 1:Ncov){
+    IndTau[j] ~ dunif(-50,50)
+    TauB[j] <- exp(IndTau[j])
+    mean.beta[j] ~ dnorm(0,0.01)
+
+    for(i in 1:Nspecies){
+      betas[i,j] ~ dnorm(mean.beta[j], TauB[j])T(-12,12)
+      Ind[i,j] <- step(abs(betas[i,j])-.05)
+    }
+  }
+  
+#   for(j in 1:Ncov){
+#     mean.beta[j] ~ dnorm(0, 0.01)
+#     sd.beta[j] ~ dunif(0, 10)
+#     tau.beta[j] <- pow(sd.beta[j]+0.001, -2)
+#     for(i in 1:Nspecies){
+#       betas[i,j] ~ dnorm(mean.beta[j], tau.beta[j])T(-12,12)
+#     }
+#   }
+  #------------------------------------------------------------------------------
+  #------------------------------------------------------------------------------
+  # Likelihood
+  for(i in 1:Nobs){
+    logit(psi[i]) <- alpha[Species[i]] + inprod(betas[Species[i],], X[i, ])
+    z[i] ~ dbern(psi[i])
+    Y[i] ~ dbinom(z[i] * p.detect[Species[i]], J[i])
+  }
+  
+  # Store beta mean and st.dev.
+  for(j in 1:Ncov){
+    mean.beta.post[j] <- mean(betas[, j])
+    sd.beta.post[j] <- sd(betas[, j])
+  }
+  #--------------------------------------------------------------------------
+  #--------------------------------------------------------------------------
+  
+  # Deal with missing data:
+  
+  for(cov in 1:16){
+    sd.x[cov] ~ dunif(0,10)
+    Prec.x[cov] <- pow(sd.x[cov],-2)
+  }
+  
+  #p.hydro[1] <- 1/3; p.hydro[2] <- 1/3; p.hydro[3] <- 1/3
+  
+  for(cov in 1:16){
+    for(k in 1:Nobs){
+      X[k, cov] ~ dnorm(0, Prec.x[cov])
+    }
+  }
+  
+  
+  #for(k in 1:Nobs){
+  #X[k, 17] ~ dcat(p.hydro[])
+  #}
+  
+  
+}
