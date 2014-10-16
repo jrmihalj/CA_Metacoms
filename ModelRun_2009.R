@@ -111,7 +111,7 @@ quartz(height=4, width=11)
 x11(height=4, width=11)
 caterplot(bundle_full, parms="betas", horizontal=F)#, random=50)
 
-caterplot(bundle_full, parms="sd.beta.post", horizontal=F)
+caterplot(bundle_full, parms="mean.beta.post", horizontal=F)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 # ################################################
@@ -121,8 +121,7 @@ source(file="calc_waic.R")
 
 WAIC_full <- calc_waic(bundle_full, jags_d)
 WAIC_full$WAIC
-# 1274.447
-
+# 1486.244
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 # ################################################
@@ -158,7 +157,7 @@ for(i in 1:Ncov_2009){
 hdi.sd
 
 # Which are greater than zero?
-# Aspect (3), Snails_RA1 (15)
+# Aspect (3), Snails_RA1 (15) Snails_RA2 (16)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
@@ -168,7 +167,7 @@ hdi.sd
 
 # X_reduced for reduced covariates:
 
-X_2009_reduced <- X_2009[, c(3,11,12,15)]
+X_2009_reduced <- X_2009[, c(3,11,12,15,16)]
 Ncov_2009_reduced <- ncol(X_2009_reduced)
 
 # data:
@@ -248,42 +247,10 @@ source(file="calc_waic.R")
 
 WAIC_reduced <- calc_waic(bundle_reduced, jags_d_reduced)
 WAIC_reduced$WAIC
-# 1253.187 Slightly better
+# 1459.747 #better
 
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
-#Remove 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ################################################
 # Check random vs. fixed:
@@ -302,7 +269,7 @@ for(i in 1:Ncov_2009_reduced){
 hdi.mean.reduced
 
 # Which do not include zero?
-# Amph_MDS2 (2), Fish (4)
+# Amph_MDS2 (2)
 
 # Check st.dev (Random Effects)
 
@@ -316,7 +283,214 @@ for(i in 1:Ncov_2009_reduced){
 }
 hdi.sd.reduced
 
-# Only Fish (4)
+# Snails_RA2 only
+
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+
+################################################
+# Try Dropping Snails_RA1  (4cov): best
+# Try Dropping Snails_RA2  (4covB):
+# Try Dropping Snails_MDS1 (4covC):
+# Try Dropping Amph_MDS2   (4covD):
+# Try Dropping Aspect      (4covE):
+
+# Try Dropping Snails_RA1 + Snails_MDS1 (3cov): best** 
+# Try Dropping Snails_RA1 + Amph_MDS2   (3covB):
+
+# Try Dropping Snails_RA1 + Snails_MDS1 + Aspect      (2covA):  
+# Try Dropping Snails_RA1 + Snails_MDS1 + Snails_RA2  (2covB):
+
+# Try Only Aspect     (1cov): 
+# Try only Amph_MDS2  (1covB):
+# Try only Snails_RA2 (1covC):
+################################################
+
+X_2009_1covC <- data.frame(X_2009_reduced[, c(5)])
+head(X_2009_1covC)
+Ncov_2009_1covC <- ncol(X_2009_1covC)
+
+# data:
+jags_d_1covC <- list(Y=Y_2009,
+                    X=X_2009_1covC,
+                    Species=Species_2009,
+                    Nspecies=Nspecies_2009,
+                    Ncov=Ncov_2009_1covC,
+                    Nobs=Nobs_2009,
+                    J=J_2009)
+
+
+# initialize model:
+
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+jags.parsamps <- NULL
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
+  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
+  store<-1500
+  nadap<-80000
+  nburn<-80000
+  thin<-50
+  mod <- jags.model(file = "MLM_model.txt", 
+                    data = jags_d_1covC, n.chains = 1, n.adapt=nadap,
+                    inits = jinits)
+  update(mod, n.iter=nburn)
+  out <- coda.samples(mod, n.iter = store*thin, 
+                      variable.names = params, thin=thin)
+  return(out)
+}
+
+bundle_1covC <- NULL
+bundle_1covC <- list(jags.parsamps[[1]][[1]],
+                    jags.parsamps[[2]][[1]],
+                    jags.parsamps[[3]][[1]])
+
+class(bundle_1covC) <- "mcmc.list"
+
+stopCluster(cl)
+
+caterplot(bundle_1covC, parms="betas", horizontal=F)
+caterplot(bundle_1covC, parms="mean.beta.post", horizontal=F)
+caterplot(bundle_1covC, parms="sd.beta.post", horizontal=F)
+
+
+################################################
+# Calculate WAIC for step-wise removal models:
+################################################
+source(file="calc_waic.R")
+
+WAIC_full <- calc_waic(bundle_full, jags_d)
+WAIC_full$WAIC
+# 1486.244
+
+WAIC_reduced <- calc_waic(bundle_reduced, jags_d_reduced)
+WAIC_reduced$WAIC
+# 1459.747
+
+#########
+WAIC_4cov <- calc_waic(bundle_4cov, jags_d_4cov)
+WAIC_4cov$WAIC
+# 1456.439 ***
+
+WAIC_4covB <- calc_waic(bundle_4covB, jags_d_4covB)
+WAIC_4covB$WAIC
+# 1461.954 bad
+
+WAIC_4covC <- calc_waic(bundle_4covC, jags_d_4covC)
+WAIC_4covC$WAIC
+# 1459.04 bad
+
+WAIC_4covD <- calc_waic(bundle_4covD, jags_d_4covD)
+WAIC_4covD$WAIC
+# 1459.923 bad
+
+WAIC_4covE <- calc_waic(bundle_4covE, jags_d_4covE)
+WAIC_4covE$WAIC
+# 1460.345 bad
+
+#########
+WAIC_3cov <- calc_waic(bundle_3cov, jags_d_3cov)
+WAIC_3cov$WAIC
+# 1454.78 **** best model 
+
+WAIC_3covB <- calc_waic(bundle_3covB, jags_d_3covB)
+WAIC_3covB$WAIC
+# 1456.6
+
+#########
+WAIC_2covA <- calc_waic(bundle_2covA, jags_d_2covA)
+WAIC_2covA$WAIC
+# 1456.359 bad
+
+WAIC_2covB <- calc_waic(bundle_2covB, jags_d_2covB)
+WAIC_2covB$WAIC
+# 1458.04 bad
+
+#########
+WAIC_1cov <- calc_waic(bundle_1cov, jags_d_1cov)
+WAIC_1cov$WAIC
+# 1457.327 
+
+WAIC_1covB <- calc_waic(bundle_1covB, jags_d_1covB)
+WAIC_1covB$WAIC
+# 1458.802 
+
+WAIC_1covC <- calc_waic(bundle_1covC, jags_d_1covC)
+WAIC_1covC$WAIC
+# 1457.126 
+
+
+#########
+WAIC_null <- calc_waic(bundle_null, jags_d_null)
+WAIC_null$WAIC
+# 1458.632
+
+
+# BEST MODEL:
+# Apsect, Amph_MDS2, Snails_RA2 (3cov)
+
+
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+
+################################################
+# Now fit a null model (only random intercepts):
+################################################
+
+# data:
+jags_d_null <- list(Y=Y_2009,
+                       Species=Species_2009,
+                       Nspecies=Nspecies_2009,
+                       Nobs=Nobs_2009,
+                       J=J_2009)
+
+# parameters:
+params_null <- c("alpha", "p.detect", "psi", "z")
+
+
+# initialize model:
+
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+jags.parsamps <- NULL
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
+  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
+  store<-1500
+  nadap<-80000
+  nburn<-80000
+  thin<-50
+  mod <- jags.model(file = "MLM_model_Null.txt", 
+                    data = jags_d_null, n.chains = 1, n.adapt=nadap,
+                    inits = jinits)
+  update(mod, n.iter=nburn)
+  out <- coda.samples(mod, n.iter = store*thin, 
+                      variable.names = params_null, thin=thin)
+  return(out)
+}
+
+bundle_null <- NULL
+bundle_null <- list(jags.parsamps[[1]][[1]],
+                       jags.parsamps[[2]][[1]],
+                       jags.parsamps[[3]][[1]])
+
+class(bundle_null) <- "mcmc.list"
+
+stopCluster(cl)
+
+
+# ################################################
+# # Calculate WAIC for reduced model:
+# ################################################
+source(file="calc_waic.R")
+
+WAIC_null <- calc_waic(bundle_null, jags_d_null)
+WAIC_null$WAIC
+# 1458.632
+
 
 
 ################################################

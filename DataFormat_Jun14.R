@@ -292,11 +292,11 @@ X_all <- array(0, dim=c(Nsite_all*Nspecies_all, Ncov))
 
 # Do the following for each year:
 t <- 1; i <- 1
-TT <- Nsite_all
-while(i <= Nspecies_all){
-  X_all[t:TT, ] <- Xcov_all
-  t <- t + Nsite_all
-  TT <- TT + Nsite_all
+TT <- Nsite_2011
+while(i <= Nspecies_2011){
+  X_2011[t:TT, ] <- Xcov_2011
+  t <- t + Nsite_2011
+  TT <- TT + Nsite_2011
   i <- i + 1
 }
 
@@ -315,8 +315,8 @@ Y_2012 <- NULL
 Y_all <- NULL
 
 # Do this for each year:
-for(i in 1:Nspecies_2012){
-  Y_2012 <- c(Y_2012, Yobs_2012[i, ])
+for(i in 1:Nspecies_2011){
+  Y_2011 <- c(Y_2011, Yobs_2011[i, ])
 }
 
 # Number of total observations

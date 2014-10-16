@@ -18,6 +18,10 @@ pairs(X_2012[,c(6:10, 14:23)])
 
 X_2012 <- X_2012[, -c(1:4,6:9,11,12,15,17:22)]
 
+# REMOVE: Fish
+
+X_2012 <- X_2012[, -7]
+
 Ncov_2012 <- ncol(X_2012)
 ################################################
 # JAGS model run:
@@ -36,8 +40,9 @@ jags_d <- list(Y=Y_2012,
                J=J_2012)
 
 # parameters:
-params <- c("alpha", "betas", "I", "p.detect", 
-            "p.include", "sd.beta.post", "mean.beta.post")
+params <- c("alpha", "betas", "p.detect", 
+            "p.include", "sd.beta.post", "mean.beta.post",
+            "z")
 
 jinits <- function() {
   list(
@@ -56,8 +61,8 @@ registerDoParallel(cl)
 jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   #setwd("~/GitHub/MLM_EcologyInSilico")
-  store<-1000
-  nadap<-50000
+  store<-1500
+  nadap<-80000
   nburn<-80000
   thin<-50
   mod <- jags.model(file = "MLM_model.txt", 
@@ -68,12 +73,12 @@ jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   return(out)
 }
 
-bundle <- NULL
-bundle <- list(jags.parsamps[[1]][[1]],
-               jags.parsamps[[2]][[1]],
-               jags.parsamps[[3]][[1]])
+bundle_full <- NULL
+bundle_full <- list(jags.parsamps[[1]][[1]],
+                    jags.parsamps[[2]][[1]],
+                    jags.parsamps[[3]][[1]])
 
-class(bundle) <- "mcmc.list"
+class(bundle_full) <- "mcmc.list"
 
 stopCluster(cl)
 #--------------------------------------------------------------------------
@@ -84,184 +89,97 @@ stopCluster(cl)
 ################################################
 library(ggmcmc)
 library(mcmcplots)
-alpha.df <- ggs(bundle, family="alpha")
-beta.df <- ggs(bundle, family="betas")
-#I.df <- ggs(bundle, family="I")
-sd.beta.df <- ggs(bundle, family="sd.beta.post")
-mean.beta.df <- ggs(bundle, family="mean.beta.post")
-p.detect.df <- ggs(bundle, family="p.detect")
-#p.include.df <- ggs(bundle, family="p.include")
+alpha.df <- ggs(bundle_full, family="alpha")
+beta.df <- ggs(bundle_full, family="betas")
+sd.beta.df <- ggs(bundle_full, family="sd.beta.post")
+mean.beta.df <- ggs(bundle_full, family="mean.beta.post")
+p.detect.df <- ggs(bundle_full, family="p.detect")
 
 ggs_Rhat(alpha.df)
 ggs_Rhat(beta.df)
 ggs_Rhat(sd.beta.df)
 ggs_Rhat(p.detect.df)
 ggs_Rhat(mean.beta.df)
-#ggs_Rhat(p.include.df)
 
 quartz(height=4, width=11)
 x11(height=4, width=11)
-caterplot(bundle, parms="betas", horizontal=F)#, random=50)
+caterplot(bundle_full, parms="betas", horizontal=F)#, random=50)
 
-caterplot(bundle, parms="sd.beta.post", horizontal=F)
+caterplot(bundle_full, parms="mean.beta.post", horizontal=F)
+caterplot(bundle_full, parms="sd.beta.post", horizontal=F)
+
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
-# 
 # ################################################
-# # Check best model:
+# # Calculate WAIC for full model:
 # ################################################
-# 
-# Ipost <- NULL
-# Ipost <- array(dim=c(store*3, Ncov)) # indicator variable array
-# for (i in 1:Ncov){
-#   string <- paste("I[", i, "]", sep="")
-#   Ipost[, i] <- subset(I.df, Parameter==string)$value
-# }
-# 
-# # what are the unique models that have nonzero posterior probability?
-# uniquemods <- unique(Ipost, MARGIN=1)
-# # how many do we have?
-# nmods <- dim(uniquemods)[1]
-# nmods
-# model.probabilities <- rep(NA, nmods)
-# for (i in 1:nmods){
-#   TFs <- apply(Ipost, 1, function(x) all(x == uniquemods[i,]))
-#   model.probabilities[i] <- sum(TFs) / (store*3)
-# }
-# 
-# sum(model.probabilities)
-# ordered.mod.probs <- model.probabilities[order(-model.probabilities)]
-# ordered.mods <- uniquemods[order(-model.probabilities), ]
-# 
-# ordered.mod.probs
-# ordered.mods
+source(file="calc_waic.R")
 
-# Best model probability: 0.986, next 0.0057
-# Includes variables: 1-5
+WAIC_full <- calc_waic(bundle_full, jags_d)
+WAIC_full$WAIC
+# 517.0422
 
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
+# ################################################
+# # Check 'best' model:
+# ################################################
 
-################################################
-# Now refit best model:
-################################################
-# (I deleted most of the data, just to save on space)
-
-# X_best for best covariates:
-
-X_best <- X[, c(1:5)]
-Ncov <- ncol(X_best)
-
-# data:
-jags_d_best <- list(Y=Y,
-                    X=X_best,
-                    Species=Species,
-                    Nspecies=Nspecies,
-                    Ncov=Ncov,
-                    Nobs=Nobs,
-                    J=J)
-
-# parameters:
-params_best <- c("alpha", "betas", "p.detect", 
-                 "sd.beta.post", "psi")
-jinits <- function() {
-  list(
-    z=ifelse(Y > 0, 1, 0),
-    .RNG.name=c("base::Super-Duper"),
-    .RNG.seed=as.numeric(randomNumbers(n = 1, min = 1, max = 1e+06, col=1))
-  )
-}
-# initialize model:
-
-library(doParallel)
-cl <- makeCluster(3)
-registerDoParallel(cl)
-
-jags.parsamps <- NULL
-jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
-  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
-  store<-1000
-  nadap<-20000
-  nburn<-50000
-  thin<-50
-  mod <- jags.model(file = "MLM_model_Best.txt", 
-                    data = jags_d_best, n.chains = 1, n.adapt=nadap,
-                    inits = jinits)
-  update(mod, n.iter=nburn)
-  out <- coda.samples(mod, n.iter = store*thin, 
-                      variable.names = params_best, thin=thin)
-  return(out)
-}
-
-bundle_best <- NULL
-bundle_best <- list(jags.parsamps[[1]][[1]],
-                    jags.parsamps[[2]][[1]],
-                    jags.parsamps[[3]][[1]])
-
-class(bundle_best) <- "mcmc.list"
-
-stopCluster(cl)
-
-################################################
-# Check Convergence:
-################################################
-library(ggmcmc)
-library(mcmcplots)
-alpha.df.best <- ggs(bundle_best, family="alpha")
-beta.df.best <- ggs(bundle_best, family="betas")
-sd.beta.df.best <- ggs(bundle_best, family="sd.beta.post")
-p.detect.df.best <- ggs(bundle_best, family="p.detect")
-psi.df.best <- ggs(bundle_best, family="psi")
-
-ggs_Rhat(alpha.df.best)
-ggs_Rhat(beta.df.best)
-ggs_Rhat(sd.beta.df.best)
-ggs_Rhat(p.detect.df.best)
-
-quartz(height=4, width=11)
-x11(height=4, width=11)
-caterplot(bundle_best, parms="betas", horizontal=F)
-caterpoints(as.vector(Beta)[1:(Nspecies*Ncov)], horizontal=F)
-caterplot(bundle_best, parms="sd.beta.post", horizontal=F)
-
-################################################
-# Check random vs. fixed:
-################################################
-# If 95 HDI of st.dev. of beta[j] overlaps zero, then fixed effect.
-# (i.e. no significant variability in effect among species)
+# Check to see which covariate effects (slopes) != 0
 
 source(file="HDI.R")
-hdi.sd <- array(0, dim=c(Ncov, 2))
+hdi.mean <- array(0, dim=c(Ncov_2012, 2))
 
-for(i in 1:Ncov){
-  sub <- subset(sd.beta.df.best, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+for(i in 1:Ncov_2012){
+  sub <- subset(mean.beta.df, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.mean[i, ] <- hdi
+}
+hdi.mean
+
+# Which do not include zero?
+# OpenW (2), Amph_Rich(4), hydro (7)
+
+# Check to see which covariate effects are significantly random (st.dev > 0)
+
+hdi.sd <- array(0, dim=c(Ncov_2012, 2))
+
+for(i in 1:Ncov_2012){
+  sub <- subset(sd.beta.df, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
   hdi <- HDI(sub) #HDI of st.dev. for each covariate
   
   hdi.sd[i, ] <- hdi
 }
 hdi.sd
-# The model estimated that only covariate 5 has a fixed effect
 
-
-################################################
-# Extract 'linear predictor' of the model: logit(psi)
-################################################
-
-linpred.best <- NULL
-
-for(i in 1:Nobs){
-  sub <- subset(psi.df.best, Parameter==paste("psi[", i, "]", sep=""))$value
-  sub <- log(sub/(1-sub))
-  linpred.best[i] <- mean(sub)
-}
-
+# Which are greater than zero?
+# Aspect (1)
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
 ################################################
-# Now fit the model that has NO RANDOM TERMS (i.e. no species-level variability in beta[j]:
+# Now refit reduced model:
 ################################################
-# (I deleted most of the data, just to save on space)
+
+# X_reduced for reduced covariates:
+
+X_2012_reduced <- X_2012[, c(1,2,4,7)]
+Ncov_2012_reduced <- ncol(X_2012_reduced)
+
+# data:
+jags_d_reduced <- list(Y=Y_2012,
+                       X=X_2012_reduced,
+                       Species=Species_2012,
+                       Nspecies=Nspecies_2012,
+                       Ncov=Ncov_2012_reduced,
+                       Nobs=Nobs_2012,
+                       J=J_2012)
+
+# parameters:
+params_reduced <- c("alpha", "betas", "p.detect", 
+                    "sd.beta.post", "mean.beta.post", "psi", 
+                    "z")
 
 # initialize model:
 
@@ -272,101 +190,226 @@ registerDoParallel(cl)
 jags.parsamps <- NULL
 jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
-  store<-1000
-  nadap<-20000
-  nburn<-50000
+  store<-1500
+  nadap<-80000
+  nburn<-80000
   thin<-50
-  mod <- jags.model(file = "MLM_model_NoRandom.txt", 
-                    data = jags_d_best, n.chains = 1, n.adapt=nadap,
+  mod <- jags.model(file = "MLM_model.txt", 
+                    data = jags_d_reduced, n.chains = 1, n.adapt=nadap,
                     inits = jinits)
   update(mod, n.iter=nburn)
   out <- coda.samples(mod, n.iter = store*thin, 
-                      variable.names = params_best, thin=thin)
+                      variable.names = params_reduced, thin=thin)
   return(out)
 }
 
-bundle_norand <- NULL
-bundle_norand <- list(jags.parsamps[[1]][[1]],
-                      jags.parsamps[[2]][[1]],
-                      jags.parsamps[[3]][[1]])
+bundle_reduced <- NULL
+bundle_reduced <- list(jags.parsamps[[1]][[1]],
+                       jags.parsamps[[2]][[1]],
+                       jags.parsamps[[3]][[1]])
 
-class(bundle_norand) <- "mcmc.list"
+class(bundle_reduced) <- "mcmc.list"
 
 stopCluster(cl)
 
-################################################
-# Check Convergence:
-################################################
-library(ggmcmc)
-library(mcmcplots)
-alpha.df.norand <- ggs(bundle_norand, family="alpha")
-beta.df.norand <- ggs(bundle_norand, family="betas")
-p.detect.df.norand <- ggs(bundle_norand, family="p.detect")
-psi.df.norand <- ggs(bundle_norand, family="psi")
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+# ################################################
+# # Calculate WAIC for reduced model:
+# ################################################
+source(file="calc_waic.R")
 
-ggs_Rhat(alpha.df.norand)
-ggs_Rhat(beta.df.norand)
-ggs_Rhat(p.detect.df.norand)
-
-quartz(height=4, width=11)
-x11(height=4, width=11)
-caterplot(bundle_norand, parms="betas", horizontal=F)
-caterplot(bundle_norand, parms="alpha", horizontal=F)
-
-################################################
-# Extract 'linear predictor' of the model: logit(psi)
-################################################
-
-linpred.norand <- NULL
-
-for(i in 1:Nobs){
-  sub <- subset(psi.df.norand, Parameter==paste("psi[", i, "]", sep=""))$value
-  sub <- log(sub/(1-sub))
-  linpred.norand[i] <- mean(sub)
-}
+WAIC_reduced <- calc_waic(bundle_reduced, jags_d_reduced)
+WAIC_reduced$WAIC
+# 498.7703
 
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 
 ################################################
-# Conduct PCA to ordinate sites, map environmental effects
+# Try Dropping Aspect        (3cov): best
+# Try Dropping hydro instead (3covB): 
+# Try Dropping OpenW instead (3covC): 
+# Try Dropping Amph_Rich     (3covD): (no diff from 3cov)
+ 
+# Try Dropping Aspect + OpenW     (2cov): best
+# Try Dropping Aspect + hydro     (2covB): 
+# Try Dropping Aspect + Amph_Rich (2covC):
+
+# Try only Amph_Rich (1cov): better, but:
+# Try only hydro     (1covB): 
 ################################################
-MLM.fitted <- array(linpred.best - linpred.norand, c(Nobs/Nspecies, Nspecies))
 
-rownames(MLM.fitted)=c(1:Nsite)
-colnames(MLM.fitted)=paste0("Species", 1:Nspecies)
-# standardize over spp
+X_2012_2cov <-(X_2012_reduced[, -c(3)])
+head(X_2012_2cov)
+Ncov_2012_2cov <- ncol(X_2012_2cov)
 
-MLM.fitted.standard <- MLM.fitted
-for(j in 1:Nspecies){
-  MLM.fitted.standard[,j] <- (MLM.fitted[,j]-mean(MLM.fitted[,j]))/sd(MLM.fitted[,j])
-} 
+# data:
+jags_d_2cov <- list(Y=Y_2012,
+                    X=X_2012_2cov,
+                    Species=Species_2012,
+                    Nspecies=Nspecies_2012,
+                    Ncov=Ncov_2012_2cov,
+                    Nobs=Nobs_2012,
+                    J=J_2012)
 
-ss <- cor(MLM.fitted.standard)
-U <- svd(ss)
-mlm.fit <- MLM.fitted.standard %*% U$v
-mlm.fit <- mlm.fit[,1:2]
 
-# environmental variables (only those with significant random effects)
-envir.vars <- Xcov[, c(1:4)]
-mlm.envir <- NULL
-for(j in 1:ncol(envir.vars)){
-  mlm.envir <- cbind(mlm.envir, envir.vars[,j]*mlm.fit[,1],envir.vars[,j]*mlm.fit[,2])
+# initialize model:
+
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+jags.parsamps <- NULL
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
+  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
+  store<-1500
+  nadap<-80000
+  nburn<-80000
+  thin<-50
+  mod <- jags.model(file = "MLM_model.txt", 
+                    data = jags_d_2cov, n.chains = 1, n.adapt=nadap,
+                    inits = jinits)
+  update(mod, n.iter=nburn)
+  out <- coda.samples(mod, n.iter = store*thin, 
+                      variable.names = params, thin=thin)
+  return(out)
 }
 
-envir.points <- t(array(colMeans(mlm.envir),c(2,dim(mlm.envir)[2]/2)))
+bundle_2cov <- NULL
+bundle_2cov <- list(jags.parsamps[[1]][[1]],
+                     jags.parsamps[[2]][[1]],
+                     jags.parsamps[[3]][[1]])
 
-# plot mlm
+class(bundle_2cov) <- "mcmc.list"
 
-x11(height=5, width=5)
-plot(-mlm.fit,xlab="PC1",ylab="PC2",type="n")
-#text(-mlm.fit,label=c(1:(Nobs/Nspecies)),cex=.5)
-points(-mlm.fit, pch=19, cex=0.5)
+stopCluster(cl)
 
-arrow.coordMLM <- cbind(array(0,dim(envir.points)),-envir.points)
+caterplot(bundle_2cov, parms="betas", horizontal=F)
+caterplot(bundle_2cov, parms="mean.beta.post", horizontal=F)
+caterplot(bundle_2cov, parms="sd.beta.post", horizontal=F)
+caterplot(bundle_2cov, parms="alpha", horizontal=F)
+caterplot(bundle_2cov, parms="p.detect", horizontal=F)
 
-arrows(arrow.coordMLM[,1],arrow.coordMLM[,2],arrow.coordMLM[,3],arrow.coordMLM[,4], 
-       code=2, col="black", length=0.05, lwd=.8)
 
-text(1.3*-envir.points,label=c("Cov1", "Cov2", "Cov3", "Cov4"),cex=1, font=2)
+################################################
+# Calculate WAIC for step-wise removal models:
+################################################
+source(file="calc_waic.R")
 
+WAIC_full <- calc_waic(bundle_full, jags_d)
+WAIC_full$WAIC
+# 517.0422
+
+WAIC_reduced <- calc_waic(bundle_reduced, jags_d_reduced)
+WAIC_reduced$WAIC
+# 498.7703
+
+###########
+WAIC_3cov <- calc_waic(bundle_3cov, jags_d_3cov)
+WAIC_3cov$WAIC
+# 494.7796
+
+WAIC_3covB <- calc_waic(bundle_3covB, jags_d_3covB)
+WAIC_3covB$WAIC
+# 496.8541 worse
+
+WAIC_3covC <- calc_waic(bundle_3covC, jags_d_3covC)
+WAIC_3covC$WAIC
+# 495.3057 worse
+
+WAIC_3covD <- calc_waic(bundle_3covD, jags_d_3covD)
+WAIC_3covD$WAIC
+# 494.73 no different than 3cov
+
+###########
+WAIC_2cov <- calc_waic(bundle_2cov, jags_d_2cov)
+WAIC_2cov$WAIC
+# 492.8701** better
+
+WAIC_2covB <- calc_waic(bundle_2covB, jags_d_2covB)
+WAIC_2covB$WAIC
+# 494.2248 nope...
+
+WAIC_2covC <- calc_waic(bundle_2covC, jags_d_2covC)
+WAIC_2covC$WAIC
+# 494.046 nope...
+
+###########
+WAIC_1cov <- calc_waic(bundle_1cov, jags_d_1cov)
+WAIC_1cov$WAIC
+# 492.0211
+
+WAIC_1covB <- calc_waic(bundle_1covB, jags_d_1covB)
+WAIC_1covB$WAIC
+# 491.7456 ***
+
+###########
+WAIC_null <- calc_waic(bundle_null, jags_d_null)
+WAIC_null$WAIC
+# 492.3237
+
+# BEST MODEL:
+# Hydro OR 
+# Null OR 
+# Amph_Rich OR
+# Amph_Rich + Hydro
+
+#--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
+
+################################################
+# Now fit a null model (only random intercepts):
+################################################
+
+# data:
+jags_d_null <- list(Y=Y_2012,
+                    Species=Species_2012,
+                    Nspecies=Nspecies_2012,
+                    Nobs=Nobs_2012,
+                    J=J_2012)
+
+# parameters:
+params_null <- c("alpha", "p.detect", "psi", "z")
+
+
+# initialize model:
+
+library(doParallel)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+jags.parsamps <- NULL
+jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
+  #setwd("C:\Users\Joe\Documents\GitHub\CA_Metacoms")
+  store<-1500
+  nadap<-80000
+  nburn<-80000
+  thin<-50
+  mod <- jags.model(file = "MLM_model_Null.txt", 
+                    data = jags_d_null, n.chains = 1, n.adapt=nadap,
+                    inits = jinits)
+  update(mod, n.iter=nburn)
+  out <- coda.samples(mod, n.iter = store*thin, 
+                      variable.names = params_null, thin=thin)
+  return(out)
+}
+
+bundle_null <- NULL
+bundle_null <- list(jags.parsamps[[1]][[1]],
+                    jags.parsamps[[2]][[1]],
+                    jags.parsamps[[3]][[1]])
+
+class(bundle_null) <- "mcmc.list"
+
+stopCluster(cl)
+
+
+# ################################################
+# # Calculate WAIC for reduced model:
+# ################################################
+source(file="calc_waic.R")
+
+WAIC_null <- calc_waic(bundle_null, jags_d_null)
+WAIC_null$WAIC
+# 492.3237
