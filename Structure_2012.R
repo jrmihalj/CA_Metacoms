@@ -192,6 +192,7 @@ Bound.plot <- ggplot(data.frame(Bound), aes(x=index))+
 quartz(height=3.5, width=3.5)
 print(Bound.plot)
 
+
 ####################################
 #### DISTRIBUTION OF STRUCTURES ####
 ####################################
@@ -202,12 +203,8 @@ unique(Structure)
 Structure2 <- Structure
 
 # Change the order to something more logical/ideal for plotting
-Structure2 <- replace(Structure2, which(Structure2=="Quasi-Clementsian"), "b_Quasi-Clem")
-Structure2 <- replace(Structure2, which(Structure2=="Clementsian"), "a_Clem")
-Structure2 <- replace(Structure2, which(Structure2=="Gleasonian"), "c_Gleas")
-Structure2 <- replace(Structure2, which(Structure2=="Random"), "f_Rand")
-Structure2 <- replace(Structure2, which(Structure2=="Quasi-Nested"), "e_Quasi-Nest")
-Structure2 <- replace(Structure2, which(Structure2=="Quasi-Gleasonian"), "d_Quasi_Gleas")
+Structure2 <- replace(Structure2, which(Structure2=="Quasi-Nested"), "a_QNest")
+Structure2 <- replace(Structure2, which(Structure2=="Random"), "b_Rand")
 
 Str.Counts <- as.data.frame(table(Structure2))
 Str.Counts$ID <- rep("A", nrow(Str.Counts)) # Need an ID var for the bar plot
@@ -219,15 +216,13 @@ frac <- ggplot(Str.Counts, aes(x=ID, y=Freq, fill=Structure2))+
   geom_bar(stat="identity")+
   theme_classic()+
   labs(x="", y="")+
-  scale_fill_grey(breaks=paste(Str.Counts$Structure),
-                  labels=c("Clementsian: 65.3% (Z structure)", "Quasi-Clementsian: 6.7%", "Gleasonian: 3.9%",
-                           "Quasi-Gleasonian: 0.1%", "Quasi-Nested: 0.3%", 
-                           "Random: 23.7% (Y structure)"))+
+  scale_fill_grey(labels=c("Quasi-Nested (1.4%)", "Random (98.6%)"))+
+  scale_y_continuous(breaks=c(0,250,500))+
   theme(axis.title.x=element_blank(), axis.ticks.x=element_blank(),
         axis.text.y=element_text(angle=90, hjust=0.5), 
         axis.text.x=element_blank(), legend.title=element_blank())
 
-quartz(height=5, width=4)
+quartz(height=5, width=3.75)
 print(frac)
 
 #####################################
@@ -248,50 +243,35 @@ Z_heat.CCA <- decorana(Z_heat, ira=0) # CHECK CONVERGENCE, ETC.
 Z_heat.CCA.sites <- Z_heat.CCA$rproj[, 2]
 Z_heat.CCA.spp <- Z_heat.CCA$cproj[, 2]
 
-colnames(Z_heat) <- rownames(Yobs_2012)
+colnames(Z_heat) <- c("Alar", "Glob", "Echi", "Mano", "Rib")
 Z_heat_ord <- Z_heat[order(Z_heat.CCA.sites, decreasing = FALSE), 
                      order(Z_heat.CCA.spp, decreasing = FALSE)]
 
-x11(height=6, width=4)
-#quartz(height=6, width=4)
+#x11(height=6, width=4)
+quartz(height=6, width=3)
 print(Matrix_HeatMap_NMDS(Z_heat_ord, xlab="", ylab=""))
 #################################################################################
 #### LOOK AT PROB DETECTION AND SPECIES-SPECIFIC COVARIATE EFFECT POSTERIORS ####
 #################################################################################
-library(rjags)
-library(ggmcmc)
 
-mod2 <- jags.model(file = "OccMod_SingleYear.txt", 
-                   data = jags_d, n.chains = 3, n.adapt=1000,
-                   inits = list(z=zinit))
-update(mod2, n.iter=5000)
-out2 <- coda.samples(mod2, n.iter = 10000, variable.names = c("p", "b"), thin=10)
-
-post.p <- NULL
-post.p <- ggs(out2, family="p")
-Rhat_p <- get_Rhat(post.p)
-head(post.p)
-
-post.b <- NULL
-post.b <- ggs(out2, family="b")
-Rhat_b <- get_Rhat(post.b)
-head(post.b)
-
-###########################      
-#######  DET. PROB  ####### 
-###########################  
 library(mcmcplots)
 
+quartz(height=4, width=5)
+caterplot(bundle_1covB, parms="p.detect", col="black", val.lim=c(0,1),
+          labels=c("Alar", "Glob", "Echi", "Mano", "Rib"))
+
+
+betalabs <- c(paste(c("Alar", "Glob", "Echi", "Mano", "Rib"),sep=""))
+            
 quartz(height=5, width=7)
-caterplot(out2, parms="p", col="black", val.lim=c(0, 1),
-          labels=paste(LETTERS[1:N], sep=""), )
-caterpoints(p0)
+caterplot(bundle_1covB, parms="betas", col="black", labels=betalabs)
 
+quartz(height=4, width=6)
+caterplot(bundle_1covB, parms="mean.beta.post", col="black",
+          labels=c("Hydro"), las=0, val.lim=c(-2,0),
+          horizontal=F)
 
-##############################      
-#######  COV. EFFECTS  ####### 
-############################## 
-
-quartz(height=5, width=7)
-caterplot(out2, parms="b", col="black")
-caterpoints(b.spp)
+quartz(height=4, width=6)
+caterplot(bundle_1covB, parms="sd.beta.post", col="black",
+          labels=c("Hydro"), las=0,
+          horizontal=F)

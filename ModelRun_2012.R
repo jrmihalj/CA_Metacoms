@@ -413,3 +413,24 @@ source(file="calc_waic.R")
 WAIC_null <- calc_waic(bundle_null, jags_d_null)
 WAIC_null$WAIC
 # 492.3237
+
+################################################
+# Check random vs. fixed of BEST MODEL:
+################################################
+mean.beta.df.best <- ggs(bundle_1covB, family="mean.beta.post")
+sd.beta.df.best <- ggs(bundle_1covB, family="sd.beta.post")
+
+# Check slopes (Fixed effects)
+
+hdi.mean.best <- HDI(mean.beta.df.best[,4])
+hdi.mean.best
+
+# Which do not include zero?
+# NONE: No fixed effects
+
+# Check st.dev (Random Effects)
+
+hdi.sd.best <- HDI(sd.beta.df.best[,4])
+hdi.sd.best
+
+# No random effects either

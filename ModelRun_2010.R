@@ -433,7 +433,7 @@ WAIC_1covB$WAIC
 ###########
 WAIC_null <- calc_waic(bundle_null, jags_d_null)
 WAIC_null$WAIC
-# 2197.668
+# 2199.982
 
 
 # BEST MODEL:
@@ -493,5 +493,37 @@ source(file="calc_waic.R")
 
 WAIC_null <- calc_waic(bundle_null, jags_d_null)
 WAIC_null$WAIC
-# 2197.668
+# 2199.982
 
+################################################
+# Check random vs. fixed of BEST MODEL:
+################################################
+mean.beta.df.best <- ggs(bundle_3cov, family="mean.beta.post")
+sd.beta.df.best <- ggs(bundle_3cov, family="sd.beta.post")
+
+# Check slopes (Fixed effects)
+
+hdi.mean.best <- array(0, dim=c(Ncov_2010_3cov, 2))
+
+for(i in 1:Ncov_2010_3cov){
+  sub <- subset(mean.beta.df.best, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.mean.best[i, ] <- hdi
+}
+hdi.mean.best
+
+# Which do not include zero?
+# Lat
+
+# Check st.dev (Random Effects)
+
+hdi.sd.best <- array(0, dim=c(Ncov_2010_3cov, 2))
+
+for(i in 1:Ncov_2010_3cov){
+  sub <- subset(sd.beta.df.best, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.sd.best[i, ] <- hdi
+}
+hdi.sd.best
