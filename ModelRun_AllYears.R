@@ -279,33 +279,42 @@ hdi.sd.reduced
 # Try Dropping Snails_RA2       (6covG):
 
 
-# Try Dropping Cond + Amph_MDS1 (5cov): 
-# Try Dropping Cond + veg_s     (5covB):
+# Try Dropping Cond + Amph_MDS1     (5cov): best
+# Try Dropping Cond + veg_s         (5covB):
+# Try Dropping Cond + Snail_Rich    (5covC):
+# Try Dropping Cond + Amph_RA1      (5covD):
+# Try Dropping Cond + Amph_RA2      (5covE):
+# Try Dropping Cond + Snails_RA2    (5covF):
 
+# Try Dropping Cond + Amph_MDS1 + veg_s       (4cov): 
+# Try Dropping Cond + Amph_MDS1 + Snails_RA2  (4covB): 
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich  (4covC): best *
+# Try Dropping Cond + Amph_MDS1 + Amph_RA1    (4covD):
+# Try Dropping Cond + Amph_MDS1 + Amph_RA2    (4covE):
 
-# Try Dropping Cond + Amph_MDS1 + veg_s (4cov): no different, so
-# Try Dropping Cond + Amph_MDS1 + Snails_RA2 (4covB): worse, so
-# Try Dropping Cond + Amph_MDS1 + veg_s + Amph_RA2 (3cov): no different, so
-# Try Dropping Cond + Amph_MDS1 + veg_s + Snails_RA2 (3covB): worse, so
-# Try Dropping Cond + Amph_MDS1 + Amph_RA2 + Amph_RA1 (3covC):
-# Try Dropping Cond + Amph_MDS1 + veg_s + Amph_RA2 + Amph_RA1 (2cov): bad, so
-# Try Dropping Cond + Amph_MDS1 + veg_s + Amph_RA2 + Snails_RA2 (2covB):not as bad:
-# Try Dropping All but Snail_Rich (1 cov): worse,
-# Try Dropping All but Snails_RA2 (1 covB): worse again,
-# Try Dropping All but Amph_RA1 (1 covC): best so far
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + veg_s      (3cov):
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + Amph_RA1   (3covB):
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + Amph_RA2   (3covC):
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + Snails_RA2 (3covD): best
 
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + Snails_RA2 + veg_s    (2cov): best *
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + Snails_RA2 + Amph_RA1 (2covB):
+# Try Dropping Cond + Amph_MDS1 + Snail_Rich + Snails_RA2 + Amph_RA2 (2covC):
+
+# Try only Amph_RA1 (1cov)
+# Try only Amph_RA2 (1covB)
 ################################################
 
-X_all_5covB <- (X_all_reduced[, -c(1,2)])
-head(X_all_5covB)
-Ncov_all_5covB <- ncol(X_all_5covB)
+X_all_1covB <- data.frame(X_all_reduced[, c(6)])
+head(X_all_1covB)
+Ncov_all_1covB <- ncol(X_all_1covB)
 
 # data:
-jags_d_5covB <- list(Y=Y_all,
-                     X=X_all_5covB,
+jags_d_1covB <- list(Y=Y_all,
+                     X=X_all_1covB,
                      Species=Species_all,
                      Nspecies=Nspecies_all,
-                     Ncov=Ncov_all_5covB,
+                     Ncov=Ncov_all_1covB,
                      Nobs=Nobs_all,
                      J=J_all)
 
@@ -324,7 +333,7 @@ jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   nburn<-80000
   thin<-50
   mod <- jags.model(file = "MLM_model.txt", 
-                    data = jags_d_5covB, n.chains = 1, n.adapt=nadap,
+                    data = jags_d_1covB, n.chains = 1, n.adapt=nadap,
                     inits = jinits)
   update(mod, n.iter=nburn)
   out <- coda.samples(mod, n.iter = store*thin, 
@@ -332,20 +341,20 @@ jags.parsamps <- foreach(i=1:3, .packages=c('rjags','random')) %dopar% {
   return(out)
 }
 
-bundle_5covB <- NULL
-bundle_5covB <- list(jags.parsamps[[1]][[1]],
+bundle_1covB <- NULL
+bundle_1covB <- list(jags.parsamps[[1]][[1]],
                      jags.parsamps[[2]][[1]],
                      jags.parsamps[[3]][[1]])
 
-class(bundle_5covB) <- "mcmc.list"
+class(bundle_1covB) <- "mcmc.list"
 
 stopCluster(cl)
 
-caterplot(bundle_5covB, parms="betas", horizontal=F)
-caterplot(bundle_5covB, parms="mean.beta.post", horizontal=F)
-caterplot(bundle_5covB, parms="sd.beta.post", horizontal=F)
-caterplot(bundle_5covB, parms="alpha", horizontal=F)
-caterplot(bundle_5covB, parms="p.detect", horizontal=F)
+caterplot(bundle_4covC, parms="betas", horizontal=F)
+caterplot(bundle_1covB, parms="mean.beta.post", horizontal=F)
+caterplot(bundle_1covB, parms="sd.beta.post", horizontal=F)
+caterplot(bundle_1covB, parms="alpha", horizontal=F)
+caterplot(bundle_1covB, parms="p.detect", horizontal=F)
 
 
 ################################################
@@ -399,47 +408,83 @@ WAIC_5covB <- calc_waic(bundle_5covB, jags_d_5covB)
 WAIC_5covB$WAIC
 # 6323.663 
 
+WAIC_5covC <- calc_waic(bundle_5covC, jags_d_5covC)
+WAIC_5covC$WAIC
+# 6323.232
+
+WAIC_5covD <- calc_waic(bundle_5covD, jags_d_5covD)
+WAIC_5covD$WAIC
+# 6323.803
+
+WAIC_5covE <- calc_waic(bundle_5covE, jags_d_5covE)
+WAIC_5covE$WAIC
+# 6328.955 (really bad)
+
+WAIC_5covF <- calc_waic(bundle_5covF, jags_d_5covF)
+WAIC_5covF$WAIC
+# 6327.7 
+
 ##########
 WAIC_4cov <- calc_waic(bundle_4cov, jags_d_4cov)
 WAIC_4cov$WAIC
-# 6322.89 ***
+# 6322.89 
 
 WAIC_4covB <- calc_waic(bundle_4covB, jags_d_4covB)
 WAIC_4covB$WAIC
-# 6323.904 worse...
+# 6323.904 
 
+WAIC_4covC <- calc_waic(bundle_4covC, jags_d_4covC)
+WAIC_4covC$WAIC
+# 6320.934 **
+
+WAIC_4covD <- calc_waic(bundle_4covD, jags_d_4covD)
+WAIC_4covD$WAIC
+# 6326.546
+
+WAIC_4covE <- calc_waic(bundle_4covE, jags_d_4covE)
+WAIC_4covE$WAIC
+# 6322.735
+
+##########
 WAIC_3cov <- calc_waic(bundle_3cov, jags_d_3cov)
 WAIC_3cov$WAIC
-# 6322.609 ***
+# 6325.286 bad...
 
 WAIC_3covB <- calc_waic(bundle_3covB, jags_d_3covB)
 WAIC_3covB$WAIC
-# 6324.36 worse...
+# 6323.794
 
-WAIC_3covB <- calc_waic(bundle_3covB, jags_d_3covB)
-WAIC_3covB$WAIC
-# 6326.175 worse still...
+WAIC_3covC <- calc_waic(bundle_3covC, jags_d_3covC)
+WAIC_3covC$WAIC
+# 6322.281
 
+WAIC_3covD <- calc_waic(bundle_3covD, jags_d_3covD)
+WAIC_3covD$WAIC
+# 6321.98
+
+##########
 WAIC_2cov <- calc_waic(bundle_2cov, jags_d_2cov)
 WAIC_2cov$WAIC
-# 6326.345 a fair bit worse
+# 6320.567 ***
 
 WAIC_2covB <- calc_waic(bundle_2covB, jags_d_2covB)
 WAIC_2covB$WAIC
-# 6323.09 Not great
+# 6327.107
 
+WAIC_2covC <- calc_waic(bundle_2covC, jags_d_2covC)
+WAIC_2covC$WAIC
+# 6322.18
+
+##########
 WAIC_1cov <- calc_waic(bundle_1cov, jags_d_1cov)
 WAIC_1cov$WAIC
-# 6325.948 worse
+# 6324.638
 
 WAIC_1covB <- calc_waic(bundle_1covB, jags_d_1covB)
 WAIC_1covB$WAIC
-# 6325.396 worse
+# 6327.738
 
-WAIC_1covC <- calc_waic(bundle_1covC, jags_d_1covC)
-WAIC_1covC$WAIC
-# 6320.836
-
+##########
 WAIC_null <- calc_waic(bundle_null, jags_d_null)
 WAIC_null$WAIC
 # 6323.25 ***
