@@ -350,7 +350,7 @@ class(bundle_1covB) <- "mcmc.list"
 
 stopCluster(cl)
 
-caterplot(bundle_4covC, parms="betas", horizontal=F)
+caterplot(bundle_2cov, parms="betas", horizontal=F)
 caterplot(bundle_1covB, parms="mean.beta.post", horizontal=F)
 caterplot(bundle_1covB, parms="sd.beta.post", horizontal=F)
 caterplot(bundle_1covB, parms="alpha", horizontal=F)
@@ -448,7 +448,7 @@ WAIC_4covE$WAIC
 ##########
 WAIC_3cov <- calc_waic(bundle_3cov, jags_d_3cov)
 WAIC_3cov$WAIC
-# 6325.286 bad...
+# 6325.286 
 
 WAIC_3covB <- calc_waic(bundle_3covB, jags_d_3covB)
 WAIC_3covB$WAIC
