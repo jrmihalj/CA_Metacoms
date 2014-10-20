@@ -251,11 +251,11 @@ Z_heat.CCA <- decorana(Z_heat, ira=0) # CHECK CONVERGENCE, ETC.
 Z_heat.CCA.sites <- Z_heat.CCA$rproj[, 2]
 Z_heat.CCA.spp <- Z_heat.CCA$cproj[, 2]
 
-#colnames(Z_heat) <- rownames(Yobs_all)
+colnames(Z_heat) <- c("Alar", "Fib", "Glob", "Echi", "Mano", "Nyct", "Opal", "Rib")
 Z_heat_ord <- Z_heat[order(Z_heat.CCA.sites, decreasing = FALSE), 
                      order(Z_heat.CCA.spp, decreasing = FALSE)]
 
-x11(height=6, width=4)
+#x11(height=6, width=4)
 quartz(height=6, width=3)
 print(Matrix_HeatMap_NMDS(Z_heat_ord, xlab="", ylab=""))
 #################################################################################
@@ -264,15 +264,20 @@ print(Matrix_HeatMap_NMDS(Z_heat_ord, xlab="", ylab=""))
 
 library(mcmcplots)
 
+plotThese <- paste("p.detect[", c(1,3:8,10), "]", sep="")
 quartz(height=4, width=5)
-caterplot(bundle_2cov, parms="p.detect", col="black", val.lim=c(0,1),
-          labels=c("Alar", "Fib", "Glob", "Echi", "Mano", "Nyct", "Opal", "Rib"))
+caterplot(bundle_2cov, parms=plotThese, col="black", val.lim=c(0,1),
+          labels=c("Alar", "Fib", "Glob", "Echi", "Mano", "Nyct", "Opal", "Rib"),
+          horizontal=T)
 
 
 betalabs <- c(paste(c("Alar", "Fib", "Glob", "Echi", "Mano", "Nyct", "Opal", "Rib"),1,sep=", "),
               paste(c("Alar", "Fib", "Glob", "Echi", "Mano", "Nyct", "Opal", "Rib"),2,sep=", "))
+
+plotThese2 <- c(paste("betas[", c(1,3:8,10), ",", 1, "]", sep=""),
+                paste("betas[", c(1,3:8,10), ",", 2, "]", sep=""))
 quartz(height=5, width=7)
-caterplot(bundle_2cov, parms="betas", col="black", labels=betalabs)
+caterplot(bundle_2cov, parms=plotThese2, col="black", labels=betalabs)
 
 quartz(height=4, width=6)
 caterplot(bundle_2cov, parms="mean.beta.post", col="black",
