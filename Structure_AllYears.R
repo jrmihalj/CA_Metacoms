@@ -205,10 +205,10 @@ unique(Structure)
 Structure2 <- Structure
 
 # Change the order to something more logical/ideal for plotting
-Structure2 <- replace(Structure2, which(Structure2=="Gleasonian"), "d_Gle")
+Structure2 <- replace(Structure2, which(Structure2=="Nested"), "d_Nest")
 Structure2 <- replace(Structure2, which(Structure2=="Random"), "f_Rand")
-Structure2 <- replace(Structure2, which(Structure2=="Quasi-Nested"), "e_QNest")
-Structure2 <- replace(Structure2, which(Structure2=="Quasi-Gleasonian"), "c_QGle")
+Structure2 <- replace(Structure2, which(Structure2=="Quasi-Nested"), "c_QNest")
+Structure2 <- replace(Structure2, which(Structure2=="Checkerboard"), "e_Check")
 Structure2 <- replace(Structure2, which(Structure2=="Clementsian"), "b_Clem")
 Structure2 <- replace(Structure2, which(Structure2=="Quasi-Clementsian"), "a_QClem")
 
@@ -222,9 +222,9 @@ frac <- ggplot(Str.Counts, aes(x=ID, y=Freq, fill=Structure2))+
   geom_bar(stat="identity")+
   theme_classic()+
   labs(x="", y="")+
-  scale_fill_grey(labels=c("Quasi-Clementsian (67.6%)", "Clementsian (1.4%)",
-                           "Quasi-Gleasonian (11.4%)", "Gleasonian (0.4%)",
-                           "Quasi-Nested (7.2%)","Random (12.0%)"))+
+  scale_fill_grey(labels=c("Quasi-Clementsian (45.4%)", "Clementsian (6.8%)",
+                           "Quasi-Nested (32.0%)", "Nested (1.6%)",
+                           "Checkerboard (0.2%)","Random (14.0%)"))+
   scale_y_continuous(breaks=c(0,250,500))+
   theme(axis.title.x=element_blank(), axis.ticks.x=element_blank(),
         axis.text.y=element_text(angle=90, hjust=0.5), 
