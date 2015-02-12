@@ -554,3 +554,42 @@ WAIC_null$WAIC
 
 caterplot(bundle_null, parms="alpha", horizontal=F)
 caterplot(bundle_null, parms="p.detect", horizontal=F)
+
+################################################
+# Check random vs. fixed of BEST MODEL:
+################################################
+library(ggmcmc)
+mean.beta.df.best <- ggs(bundle_2cov, family="mean.beta.post")
+sd.beta.df.best <- ggs(bundle_2cov, family="sd.beta.post")
+
+# Check slopes (Fixed effects)
+
+hdi.mean.best <- array(0, dim=c(Ncov_all_2cov, 2))
+
+for(i in 1:Ncov_all_2cov){
+  sub <- subset(mean.beta.df.best, Parameter==paste("mean.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.mean.best[i, ] <- hdi
+}
+hdi.mean.best
+
+# Which do not include zero?
+# NONE: No fixed effects
+
+# Check st.dev (Random Effects)
+
+hdi.sd.best <- array(0, dim=c(Ncov_all_2cov, 2))
+
+for(i in 1:Ncov_all_2cov){
+  sub <- subset(sd.beta.df.best, Parameter==paste("sd.beta.post[",i,"]",sep=""))$value
+  hdi <- HDI(sub) #HDI of st.dev. for each covariate
+  
+  hdi.sd.best[i, ] <- hdi
+}
+hdi.sd.best
+
+# [,1]      [,2]
+# [1,] 0.2846158 0.7914831
+# [2,] 0.1996663 0.7349170
+
