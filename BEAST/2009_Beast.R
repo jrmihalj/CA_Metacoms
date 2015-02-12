@@ -66,7 +66,7 @@ jinits <- function() {
 }
 
 JAGS_func <- function(store, adapt, burn, thin){
-  mod <- jags.model(file = "MLMmodel_2009_all.txt",
+  mod <- jags.model(file = "MLMmodel2009_all.txt",
                     data = jags_d, n.chains = 1, n.adapt=adapt,
                     inits = jinits)
   update(mod, n.iter=burn)
