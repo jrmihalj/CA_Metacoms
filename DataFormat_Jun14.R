@@ -152,17 +152,28 @@ Cov <- read.csv(file.choose(), header=T)
 
 # I've used the following covariates:
 colnames(Cov)
-# [1] "Site"       "Year"       "Lat"        "Long"       "Elev"      
-# [6] "Slope"      "Aspect"     "FOR"        "SSG"        "area"      
-# [11] "veg_s"      "OpenW"      "fish"       "Cond"       "TDS"       
-# [16] "DOmg"       "Amph_Rich"  "Snail_Rich" "AMCA"       "BUBO"      
-# [21] "PSRE"       "RACA"       "RADR"       "TATO"       "PHySA"     
-# [26] "LyMN"       "HELI"       "GyRA"       "RADIX"      "hydro"
+#[1] "Site"       "Year"       "Lat"        "Long"      
+#[5] "Elev"       "Slope"      "Aspect"     "FOR"       
+#[9] "SSG"        "area"       "veg_s"      "OpenW"     
+#[13] "fish"       "Cond"       "TDS"        "DOmg"      
+#[17] "Amph_Rich"  "Snail_Rich" "AMCA"       "BUBO"      
+#[21] "PSRE"       "RACA"       "RADR"       "TATO"      
+#[25] "PHySA"      "LyMN"       "HELI"       "GyRA"      
+#[29] "RADIX"      "WET"        "hydro" 
 
 # Make hydro into dummy variables:
 levels(Cov$hydro)[1] <- 1 # Permanent
 levels(Cov$hydro)[2] <- 2 # Semi-permanent
 levels(Cov$hydro)[3] <- 3 # Temporary
+
+#Need to deal with zero-inflation in WET:
+#First, ln() transform WET, and change any -Inf to zeros
+Cov$WET <- log(Cov$WET)
+Cov$WET[which(is.infinite(Cov$WET))] <- 0
+#Second, create a WET_z covariate, that dummy codes whether WET is zero or not:
+Cov$WET_z <- ifelse(Cov$WET == 0, 1, 0)
+#Move next to WET:
+Cov <- Cov[, c(1:30, 32, 31)]
 
 # Make a site.yr column in Cov:
 Cov$site.yr <- paste(Cov$Site, "_", Cov$Year, sep="")
@@ -195,6 +206,10 @@ for(i in 1:ncol(Y.obs)){
 
 # DATA CLEAN UP:
 
+#CA-SHROM_2010 - WET needs to be set to zero
+X[98, 28] <- 0 #Set WET to zero
+X[98, 29] <- 1 #Set WET_z to 1
+
 # Need to log transform:
 # Area (8), OpenW (10), Cond (12), TDS (13), DOmg (14)
 # Square-root trans: Elev (3), Slope(4), Amph_Rich (15),
@@ -216,16 +231,17 @@ X <- data.frame(X, Amph_RA, Snails_RA_fixed[,2:3])
 X <- X[, -c(17:27)]
 
 # Rearrange a bit:
-X <- X[, c(1:10, 12:16, 18:25, 11, 17)]
+X <- X[, c(1:10, 12:16, 20:27, 11, 17:19)]
 
 # Finalized Covariates:
 colnames(X)
-# [1] "Lat"         "Long"        "Elev"        "Slope"       "Aspect"     
-# [6] "FOR"         "SSG"         "area"        "veg_s"       "OpenW"      
-# [11] "Cond"        "TDS"         "DOmg"        "Amph_Rich"   "Snail_Rich" 
-# [16] "Amph_MDS1"   "Amph_MDS2"   "Snails_MDS1" "Snails_MDS2" "Amph_RA1"   
-# [21] "Amph_RA2"    "Snails_RA1"  "Snails_RA2"  "fish"        "hydro"
-
+#[1] "Lat"         "Long"        "Elev"        "Slope"      
+#[5] "Aspect"      "FOR"         "SSG"         "area"       
+#[9] "veg_s"       "OpenW"       "Cond"        "TDS"        
+#[13] "DOmg"        "Amph_Rich"   "Snail_Rich"  "Amph_MDS1"  
+#[17] "Amph_MDS2"   "Snails_MDS1" "Snails_MDS2" "Amph_RA1"   
+#[21] "Amph_RA2"    "Snails_RA1"  "Snails_RA2"  "fish"       
+#[25] "WET"         "WET_z"       "hydro"
 ##############################################################################################################
 #------------------------------------------------------------------------------------------------------------#
 ##############################################################################################################
@@ -246,7 +262,7 @@ Xcov_all <- data.frame(Xcov_all, Amph_NMDS_all_fixed[,2:3], Snails_NMDS_all_fixe
 
 Xcov_all <- as.matrix(Xcov_all)
 #Rearrange:
-Xcov_all <- Xcov_all[, c(1:15, 18:25, 16, 17)]
+Xcov_all <- Xcov_all[, c(1:15, 20:27, 16, 17:19)]
 
 
 Yobs_2009 <- Y.obs[, 1:77] # Remove Clin, Fib, Nyct, Pinw, Thic
@@ -292,11 +308,11 @@ X_all <- array(0, dim=c(Nsite_all*Nspecies_all, Ncov))
 
 # Do the following for each year:
 t <- 1; i <- 1
-TT <- Nsite_2011
-while(i <= Nspecies_2011){
-  X_2011[t:TT, ] <- Xcov_2011
-  t <- t + Nsite_2011
-  TT <- TT + Nsite_2011
+TT <- Nsite_all
+while(i <= Nspecies_all){
+  X_all[t:TT, ] <- Xcov_all
+  t <- t + Nsite_all
+  TT <- TT + Nsite_all
   i <- i + 1
 }
 
@@ -315,8 +331,8 @@ Y_2012 <- NULL
 Y_all <- NULL
 
 # Do this for each year:
-for(i in 1:Nspecies_2011){
-  Y_2011 <- c(Y_2011, Yobs_2011[i, ])
+for(i in 1:Nspecies_all){
+  Y_all <- c(Y_all, Yobs_all[i, ])
 }
 
 # Number of total observations
