@@ -77,15 +77,15 @@ cat(paste('model in "MLMmodel2009_all.txt"
           compile, nchains(1)
           parameters in "', uniqueID, '_inits.R"
           initialize
-          adapt 100
-          update 10
-          monitor alpha, thin(10)
-          monitor betas, thin(10)
-          monitor p.detect, thin(10)
-          monitor sd.beta.post, thin(10)
-          monitor mean.beta.post, thin(10)
-          monitor z, thin(10)
-          update 10
+          adapt 100000
+          update 100000
+          monitor alpha, thin(75)
+          monitor betas, thin(75)
+          monitor p.detect, thin(75)
+          monitor sd.beta.post, thin(75)
+          monitor mean.beta.post, thin(75)
+          monitor z, thin(75)
+          update 150000
           coda *, stem(PID', pid, ')
           exit', 
           sep=""), 
